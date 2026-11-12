@@ -1,61 +1,91 @@
 ---
-// A toy fold: two images of one source on opposite sides of a critical curve,
-// drawn with their uncertainty. Each of a few hundred "model draws" nudges
-// the critical curve (a small offset where the pair pins it, plus a tilt and
-// a bend that grow away from the pair) and the source position. The images
-// follow from the fold mapping beta_y = phi^2 / 2, where phi is the distance
-// from the curve, so they stretch along the magnified direction and vanish
-// when a draw pushes the source across the caustic. The band is the spread
-// of the curves; the magnification of each draw is 1 / distance to its curve.
-// Illustrative only, not a kappaccino model.
+// Two panels of images near a critical curve, drawn with their uncertainty.
+//
+// Right, a toy fold pair: two images of one source on opposite sides of the
+// curve. Each "model draw" nudges the critical curve (a small offset where the
+// pair pins it, plus a tilt and a bend that grow away from it) and the source.
+// The images follow from the lowest-order fold mapping beta = t^2 / 2, with t
+// the distance from the curve along the stretched direction.
+//
+// Left, an exact lens: a singular isothermal sphere with external shear and a
+// source near its centre. The ring and arcs are ray-shot through the lens
+// equation, each draw's images are found by solving the lens equation, and each
+// draw's critical curve is the analytic det A = 0 curve. Draws vary the
+// Einstein radius, the shear and the source position.
+//
+// Illustrative numbers throughout, not a kappaccino model.
 ---
 
 <div class="fold" data-fold-demo>
   <figure class="fig">
-    <canvas aria-hidden="true"></canvas>
+    <div class="panels">
+      <div class="panel">
+        <canvas data-panel="ring" aria-hidden="true"></canvas>
+        <p><strong>Einstein ring</strong> from a source near the lens centre</p>
+      </div>
+      <div class="panel">
+        <canvas data-panel="fold" aria-hidden="true"></canvas>
+        <p><strong>Fold pair</strong> straddling the curve</p>
+      </div>
+    </div>
     <figcaption>
-      <span class="key"><i class="sw sw-sq"></i>catalog positions of a fold pair</span>
-      <span class="key"><i class="sw sw-cloud"></i>where the model puts the images</span>
+      <span class="key"><i class="sw sw-sq"></i>catalog positions</span>
+      <span class="key"><i class="sw sw-arc"></i>the lensed source</span>
+      <span class="key"><i class="sw sw-cloud"></i>where the model draws put each image</span>
       <span class="key"><i class="sw sw-curve"></i>critical curve, median with 68% and 95% bands</span>
     </figcaption>
   </figure>
 
   <div class="side">
     <p class="readout">
-      <span>Magnification of one image</span>
-      <strong data-mu>–</strong>
+      <span>Magnification, ring image</span>
+      <strong data-mu="ring">–</strong>
+    </p>
+    <p class="readout">
+      <span>Magnification, fold image</span>
+      <strong data-mu="fold">–</strong>
     </p>
 
-    <svg class="spec" viewBox="0 0 320 96" role="img" aria-label="Spread of the magnification of one image across model draws, on a logarithmic axis.">
-      <rect x="14" y="10" width="292" height="50" class="frame"></rect>
-      <g data-rug></g>
-      <line data-range class="range" y1="35" y2="35"></line>
-      <circle data-median class="median" cy="35" r="5"></circle>
+    <svg class="spec" viewBox="0 0 320 132" role="img" aria-label="Spread of the magnification across model draws for one image of the ring source and for the fold image, on a logarithmic axis.">
+      <rect x="14" y="10" width="292" height="86" class="frame"></rect>
+      <line x1="14" x2="306" y1="53" y2="53" class="tick"></line>
+      <text x="20" y="22" class="axis">ring</text>
+      <text x="20" y="65" class="axis">fold</text>
+      <g data-rug="fold"></g>
+      <g data-rug="ring"></g>
+      <line data-range="ring" class="range" y1="34" y2="34"></line>
+      <circle data-median="ring" class="median" cy="34" r="5"></circle>
+      <line data-range="fold" class="range" y1="77" y2="77"></line>
+      <circle data-median="fold" class="median" cy="77" r="5"></circle>
       {
         [3, 10, 30, 100].map((t) => {
           const x = 14 + (292 * Math.log(t / 2)) / Math.log(150);
           return (
             <g>
-              <line x1={x} x2={x} y1="60" y2="64" class="tick" />
-              <text x={x} y="76" text-anchor="middle" class="num">
+              <line x1={x} x2={x} y1="96" y2="100" class="tick" />
+              <text x={x} y="112" text-anchor="middle" class="num">
                 ×{t}
               </text>
             </g>
           );
         })
       }
-      <text x="160" y="92" text-anchor="middle" class="axis">one tick per model draw; bar spans 68%</text>
+      <text x="160" y="128" text-anchor="middle" class="axis">one tick per model draw; bar spans 68%</text>
     </svg>
 
     <p class="readout small">
-      <span>Draws where the pair has merged away</span>
+      <span>Draws where the ring source has four images</span>
+      <strong data-flip>–</strong>
+    </p>
+    <p class="readout small">
+      <span>Draws where the fold pair has merged away</span>
       <strong data-gone>–</strong>
     </p>
 
     <div class="controls">
       <label class="slider">
-        <span>Distance to curve</span>
-        <input type="range" min="0" max="1" step="0.001" value="0.5" data-slider aria-label="Distance of the image pair from the critical curve" />
+        <span>Source offset</span>
+        <input type="range" min="0" max="1" step="0.001" value="0.5" data-slider aria-label="Offset of the source: distance of the fold pair from its curve, and of the ring source from the lens centre" />
       </label>
       <label class="slider">
         <span>Model uncertainty</span>
@@ -80,9 +110,28 @@
     display: grid;
     gap: 12px;
   }
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .panel {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+  .panel p {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .panel strong {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
   canvas {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1;
     display: block;
     border-radius: 14px;
     border: 1px solid var(--line-strong);
@@ -109,6 +158,12 @@
     width: 9px;
     height: 9px;
     border: 1.5px solid #fff;
+  }
+  .sw-arc {
+    width: 18px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 138, 76, 0.75);
   }
   .sw-cloud {
     width: 14px;
@@ -230,6 +285,11 @@
       grid-template-columns: 1fr;
     }
   }
+  @media (max-width: 460px) {
+    .panels {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 
 <script>
@@ -238,44 +298,103 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const K = 360; // model draws
   const N_RUG = 90;
-  const PHI_MIN = 0.09; // closest half-separation of the pair
-  const PHI_MAX = 0.5;
-  const SKEW = 0.35; // the stretched direction is not perpendicular to the curve
   const ROT = -0.5; // tilt of the whole scene, radians
   const VIEW = 1.9; // field width in toy units
-  const MU0 = 3; // magnification = MU0 / distance to the curve
   const SWEEP_PERIOD = 18000;
   const IDLE_AFTER = 3500;
   const XS = 57; // samples along the curve
   const X_SPAN = 1.6;
+  const G = 9; // unit Gaussians per draw
+
+  // Fold panel: the two images sit at +-t along the stretched direction (dx, dy),
+  // written in curve coordinates (x along the critical curve, y away from it).
+  const FOLD = { dx: 0.35, dy: 1, tMin: 0.09, tMax: 0.5, sigS: 0.011, mu0: 3 };
+
+  // Ring panel: singular isothermal sphere of Einstein radius b plus external
+  // shear gam at angle phg. In the frame aligned with the shear the lens equation is
+  //   beta_x = (1 - gam) x - b x / r,   beta_y = (1 + gam) y - b y / r,
+  // and det A = 1 - gam^2 - (b / r)(1 - gam cos 2 phi).
+  const RING = { b: 0.55, gam: 0.035, phg: 0.45, srcDir: 1.3, srcMax: 0.24, srcSig: 0.05 };
+  const NG = 150; // ray-shooting grid per side
+  const NSC = 120; // angles scanned when solving the lens equation
+  const NA = 96; // angles along the critical curve
+  const cosS = new Float32Array(NSC);
+  const sinS = new Float32Array(NSC);
+  for (let i = 0; i < NSC; i++) {
+    cosS[i] = Math.cos((2 * Math.PI * i) / NSC);
+    sinS[i] = Math.sin((2 * Math.PI * i) / NSC);
+  }
+
+  /** Images of a point source at (bx, by): appends x, y pairs to out. */
+  function solveImages(b: number, gam: number, phg: number, bx: number, by: number, out: number[]) {
+    const c = Math.cos(phg);
+    const s = Math.sin(phg);
+    const px = bx * c + by * s;
+    const py = -bx * s + by * c;
+    // Eliminating r between the two components leaves one equation in the image angle.
+    const f = (ca: number, sa: number) => (px + b * ca) * (1 + gam) * sa - (py + b * sa) * (1 - gam) * ca;
+    let f0 = f(cosS[0], sinS[0]);
+    for (let i = 0; i < NSC; i++) {
+      const j = (i + 1) % NSC;
+      const f1 = f(cosS[j], sinS[j]);
+      if (f0 === 0 || f0 * f1 < 0) {
+        let lo = (2 * Math.PI * i) / NSC;
+        let hi = lo + (2 * Math.PI) / NSC;
+        let flo = f0;
+        for (let it = 0; it < 16; it++) {
+          const mid = (lo + hi) / 2;
+          const fm = f(Math.cos(mid), Math.sin(mid));
+          if (flo * fm <= 0) hi = mid;
+          else {
+            lo = mid;
+            flo = fm;
+          }
+        }
+        const a = (lo + hi) / 2;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const r = Math.abs(ca) > Math.abs(sa) ? (px / ca + b) / (1 - gam) : (py / sa + b) / (1 + gam);
+        if (r > 0.03) out.push(r * (ca * c - sa * s), r * (ca * s + sa * c));
+      }
+      f0 = f1;
+    }
+  }
 
   const base = (x: number) => 0.2 * x * x;
 
   function init(root: HTMLElement) {
     const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
-    const canvas = $<HTMLCanvasElement>('canvas');
-    const ctx = canvas.getContext('2d')!;
     const slider = $<HTMLInputElement>('[data-slider]');
     const uncSlider = $<HTMLInputElement>('[data-unc]');
-    const muOut = $<HTMLElement>('[data-mu]');
     const goneOut = $<HTMLElement>('[data-gone]');
+    const flipOut = $<HTMLElement>('[data-flip]');
     const pauseBtn = $<HTMLButtonElement>('[data-pause]');
-    const rangeEl = $<SVGLineElement>('[data-range]');
-    const medianEl = $<SVGCircleElement>('[data-median]');
-    const rugG = $<SVGGElement>('[data-rug]');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const rugs = Array.from({ length: N_RUG }, () => {
-      const l = document.createElementNS(SVG_NS, 'line');
-      l.setAttribute('class', 'rug');
-      l.setAttribute('y1', '14');
-      l.setAttribute('y2', '56');
-      rugG.appendChild(l);
-      return l;
+    const views = (['fold', 'ring'] as const).map((key) => {
+      const canvas = $<HTMLCanvasElement>(`canvas[data-panel="${key}"]`);
+      const rugG = $<SVGGElement>(`[data-rug="${key}"]`);
+      const y = key === 'ring' ? 14 : 57;
+      const rugs = Array.from({ length: N_RUG }, () => {
+        const l = document.createElementNS(SVG_NS, 'line');
+        l.setAttribute('class', 'rug');
+        l.setAttribute('y1', String(y + 10));
+        l.setAttribute('y2', String(y + 36));
+        rugG.appendChild(l);
+        return l;
+      });
+      return {
+        key,
+        canvas,
+        ctx: canvas.getContext('2d')!,
+        rugs,
+        muOut: $<HTMLElement>(`[data-mu="${key}"]`),
+        rangeEl: $<SVGLineElement>(`[data-range="${key}"]`),
+        medianEl: $<SVGCircleElement>(`[data-median="${key}"]`),
+      };
     });
 
     // Per-draw unit Gaussians: curve offset, tilt, bend; source x, y; catalog noise for both images.
-    const G = 9;
     const g = new Float32Array(K * G);
     let seed = 1234;
     function roll() {
@@ -284,7 +403,6 @@
     }
 
     let u = 0.5;
-    const phiOf = (v: number) => PHI_MIN * Math.pow(PHI_MAX / PHI_MIN, v);
 
     const col = new Float32Array(K);
     const lo95 = new Float32Array(XS);
@@ -293,28 +411,188 @@
     const hi68 = new Float32Array(XS);
     const hi95 = new Float32Array(XS);
     const mus = new Float32Array(K);
+    const xAt = (i: number) => -X_SPAN + (2 * X_SPAN * i) / (XS - 1);
 
-    function draw() {
+    type View = (typeof views)[number];
+
+    function showMu(v: View) {
+    const mx = (m: number) => 14 + (292 * Math.log(Math.min(Math.max(m, 2), 300) / 2)) / Math.log(150);
+    for (let i = 0; i < N_RUG; i++) {
+      const x = mx(mus[i * 4]).toFixed(1);
+      v.rugs[i].setAttribute('x1', x);
+      v.rugs[i].setAttribute('x2', x);
+    }
+    const sorted = mus.slice().sort();
+    const p16 = sorted[Math.round(0.16 * (K - 1))];
+    const p50 = sorted[Math.round(0.5 * (K - 1))];
+    const p84 = sorted[Math.round(0.84 * (K - 1))];
+    v.rangeEl.setAttribute('x1', mx(p16).toFixed(1));
+    v.rangeEl.setAttribute('x2', mx(p84).toFixed(1));
+    v.medianEl.setAttribute('cx', mx(p50).toFixed(1));
+    const f = (m: number) => (m >= 100 ? '100+' : m < 10 ? m.toFixed(1) : m.toFixed(0));
+    v.muOut.textContent = `×${f(p50)} (${f(p16)}–${f(p84)})`;
+    }
+
+    const ringBuf = document.createElement('canvas');
+    ringBuf.width = NG;
+    ringBuf.height = NG;
+    const ringCtx = ringBuf.getContext('2d')!;
+    const ringImg = ringCtx.createImageData(NG, NG);
+    const radii = new Float32Array(K);
+    const rLo95 = new Float32Array(NA);
+    const rLo68 = new Float32Array(NA);
+    const rMed = new Float32Array(NA);
+    const rHi68 = new Float32Array(NA);
+    const rHi95 = new Float32Array(NA);
+    const found: number[] = [];
+
+    function drawRing(v: View, unc: number) {
+      const { canvas, ctx } = v;
       const w = canvas.width;
       const h = canvas.height;
-      if (!w) return;
+      if (!w) return 0;
+      const dpr = w / (canvas.clientWidth || w);
+      const S = w / VIEW;
+      const X = (x: number) => w / 2 + S * x;
+      const Y = (y: number) => h / 2 - S * y;
+      const { b, gam, phg } = RING;
+      const off = RING.srcMax * u;
+      const sx = off * Math.cos(RING.srcDir);
+      const sy = off * Math.sin(RING.srcDir);
+
+      ctx.clearRect(0, 0, w, h);
+
+      // The lensed source: shoot a ray back from every pixel through the lens equation.
+      {
+        const c = Math.cos(phg);
+        const s = Math.sin(phg);
+        const spx = sx * c + sy * s;
+        const spy = -sx * s + sy * c;
+        const inv = 1 / (2 * RING.srcSig * RING.srcSig);
+        const d = ringImg.data;
+        for (let j = 0; j < NG; j++) {
+          const y = VIEW / 2 - ((j + 0.5) * VIEW) / NG;
+          for (let i = 0; i < NG; i++) {
+            const x = ((i + 0.5) * VIEW) / NG - VIEW / 2;
+            const xp = x * c + y * s;
+            const yp = -x * s + y * c;
+            const r = Math.hypot(xp, yp) || 1e-6;
+            const bx = (1 - gam) * xp - (b * xp) / r - spx;
+            const by = (1 + gam) * yp - (b * yp) / r - spy;
+            const o = (j * NG + i) * 4;
+            d[o] = 255;
+            d[o + 1] = 138;
+            d[o + 2] = 76;
+            d[o + 3] = 235 * Math.exp(-(bx * bx + by * by) * inv);
+          }
+        }
+        ringCtx.putImageData(ringImg, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(ringBuf, 0, 0, w, h);
+      }
+
+      // Lens parameters of each draw.
+      const bOf = (k: number) => b + unc * 0.025 * g[k * G];
+      const gOf = (k: number) => Math.max(0.004, gam + unc * 0.012 * g[k * G + 1]);
+      const aOf = (k: number) => phg + unc * 0.12 * g[k * G + 2];
+
+      // Critical curve: det A = 0 gives r(phi) in closed form for every draw.
+      for (let i = 0; i < NA; i++) {
+        const phi = (2 * Math.PI * i) / NA;
+        for (let k = 0; k < K; k++) {
+          const gk = gOf(k);
+          radii[k] = (bOf(k) * (1 - gk * Math.cos(2 * (phi - aOf(k))))) / (1 - gk * gk);
+        }
+        radii.sort();
+        rLo95[i] = radii[Math.round(0.025 * (K - 1))];
+        rLo68[i] = radii[Math.round(0.16 * (K - 1))];
+        rMed[i] = radii[Math.round(0.5 * (K - 1))];
+        rHi68[i] = radii[Math.round(0.84 * (K - 1))];
+        rHi95[i] = radii[Math.round(0.975 * (K - 1))];
+      }
+      const loop = (rr: Float32Array, reverse: boolean) => {
+        for (let n = 0; n <= NA; n++) {
+          const i = (reverse ? NA - n : n) % NA;
+          const phi = (2 * Math.PI * i) / NA;
+          ctx[n ? 'lineTo' : 'moveTo'](X(rr[i] * Math.cos(phi)), Y(rr[i] * Math.sin(phi)));
+        }
+        ctx.closePath();
+      };
+      for (const [lo, hi, a] of [
+        [rLo95, rHi95, 0.13],
+        [rLo68, rHi68, 0.22],
+      ] as [Float32Array, Float32Array, number][]) {
+        ctx.fillStyle = `rgba(143, 199, 255, ${a})`;
+        ctx.beginPath();
+        loop(hi, false);
+        loop(lo, true);
+        ctx.fill();
+      }
+      ctx.strokeStyle = '#8fc7ff';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      loop(rMed, false);
+      ctx.stroke();
+
+      // Catalog positions: the images of the source centre in the reference lens.
+      const cat: number[] = [];
+      solveImages(b, gam, phg, sx, sy, cat);
+      let ref = 0;
+      for (let i = 2; i < cat.length; i += 2) if (Math.hypot(cat[i], cat[i + 1]) > Math.hypot(cat[ref], cat[ref + 1])) ref = i;
+      const refR = Math.hypot(cat[ref], cat[ref + 1]) || 1;
+      const refPhi = Math.atan2(cat[ref + 1], cat[ref]);
+
+      // Each draw: solve the lens equation for its images, and take its
+      // magnification at the reference catalog position.
+      let four = 0;
+      ctx.fillStyle = 'rgba(242, 200, 145, 0.4)';
+      const r = 1.8 * dpr;
+      for (let k = 0; k < K; k++) {
+        const o = k * G;
+        const bk = bOf(k);
+        const gk = gOf(k);
+        const ak = aOf(k);
+        found.length = 0;
+        solveImages(bk, gk, ak, sx + unc * 0.012 * g[o + 3], sy + unc * 0.012 * g[o + 4], found);
+        if (found.length >= 8) four++;
+        for (let i = 0; i < found.length; i += 2) {
+          ctx.beginPath();
+          ctx.arc(X(found[i]), Y(found[i + 1]), r, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        const det = 1 - gk * gk - (bk / refR) * (1 - gk * Math.cos(2 * (refPhi - ak)));
+        mus[k] = Math.min(1 / Math.max(Math.abs(det), 1e-3), 999);
+      }
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.6 * dpr;
+      const q = 5 * dpr;
+      for (let i = 0; i < cat.length; i += 2) ctx.strokeRect(X(cat[i]) - q, Y(cat[i + 1]) - q, 2 * q, 2 * q);
+
+      showMu(v);
+      return four;
+    }
+
+    function drawFold(v: View, unc: number) {
+      const p = FOLD;
+      const { canvas, ctx } = v;
+      const w = canvas.width;
+      const h = canvas.height;
+      if (!w) return 0;
       const dpr = w / (canvas.clientWidth || w);
       const S = w / VIEW;
       const cr = Math.cos(ROT);
       const sr = Math.sin(ROT);
       const X = (x: number, y: number) => w / 2 + S * (x * cr - y * sr);
       const Y = (x: number, y: number) => h / 2 - S * (x * sr + y * cr);
-
-      const phi0 = phiOf(u);
-      const unc = Number(uncSlider.value);
       const curve = (k: number, x: number) => base(x) + unc * (0.018 * g[k * G] + 0.13 * g[k * G + 1] * x + 0.14 * g[k * G + 2] * x * x);
+      const t0 = p.tMin * Math.pow(p.tMax / p.tMin, u);
 
       ctx.clearRect(0, 0, w, h);
 
       // Critical curve: percentiles of the draws at each point along it.
       for (let i = 0; i < XS; i++) {
-        const x = -X_SPAN + (2 * X_SPAN * i) / (XS - 1);
-        for (let k = 0; k < K; k++) col[k] = curve(k, x);
+        for (let k = 0; k < K; k++) col[k] = curve(k, xAt(i));
         col.sort();
         lo95[i] = col[Math.round(0.025 * (K - 1))];
         lo68[i] = col[Math.round(0.16 * (K - 1))];
@@ -322,7 +600,6 @@
         hi68[i] = col[Math.round(0.84 * (K - 1))];
         hi95[i] = col[Math.round(0.975 * (K - 1))];
       }
-      const xAt = (i: number) => -X_SPAN + (2 * X_SPAN * i) / (XS - 1);
       const bandPath = (lo: Float32Array, hi: Float32Array) => {
         ctx.beginPath();
         for (let i = 0; i < XS; i++) ctx[i ? 'lineTo' : 'moveTo'](X(xAt(i), hi[i]), Y(xAt(i), hi[i]));
@@ -341,60 +618,55 @@
       for (let i = 0; i < XS; i++) ctx[i ? 'lineTo' : 'moveTo'](X(xAt(i), med[i]), Y(xAt(i), med[i]));
       ctx.stroke();
 
-      // Catalog positions of the pair, from the unperturbed fold.
-      const ax = SKEW * phi0;
-      const ay = base(ax) + phi0;
-      const bx = -SKEW * phi0;
-      const by = base(bx) - phi0;
-
-      // Image positions and magnification across the draws.
-      const betaY = (phi0 * phi0) / 2;
       let gone = 0;
-      ctx.fillStyle = 'rgba(242, 200, 145, 0.4)';
-      const r = 2 * dpr;
-      for (let k = 0; k < K; k++) {
-        const o = k * G;
-        const by2 = betaY + unc * 0.011 * g[o + 4];
-        mus[k] = Math.min(MU0 / Math.max(Math.abs(ay - curve(k, ax)), 1e-3), 999);
-        if (by2 <= 0) {
-          gone++;
-          continue;
-        }
-        const phi = Math.sqrt(2 * by2);
-        const xs = unc * 0.012 * g[o + 3];
-        for (let s = 1; s >= -1; s -= 2) {
-          const j = s > 0 ? 5 : 7;
-          const px = xs + s * SKEW * phi + 0.008 * g[o + j];
-          const py = curve(k, px) + s * phi + 0.008 * g[o + j + 1];
-          ctx.beginPath();
-          ctx.arc(X(px, py), Y(px, py), r, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-      }
-
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.6 * dpr;
       const q = 5 * dpr;
-      ctx.strokeRect(X(ax, ay) - q, Y(ax, ay) - q, 2 * q, 2 * q);
-      ctx.strokeRect(X(bx, by) - q, Y(bx, by) - q, 2 * q, 2 * q);
+      {
+        // Catalog positions of the two images, from the unperturbed fold.
+        const ax = p.dx * t0;
+        const ay = base(ax) + p.dy * t0;
+        const bx = -p.dx * t0;
+        const by = base(bx) - p.dy * t0;
 
-      // Magnification spread.
-      const mx = (m: number) => 14 + (292 * Math.log(Math.min(Math.max(m, 2), 300) / 2)) / Math.log(150);
-      for (let i = 0; i < N_RUG; i++) {
-        const x = mx(mus[i * 4]).toFixed(1);
-        rugs[i].setAttribute('x1', x);
-        rugs[i].setAttribute('x2', x);
+        // Image positions and magnification across the draws.
+        const betaY = (t0 * t0) / 2;
+        ctx.fillStyle = 'rgba(242, 200, 145, 0.4)';
+        const r = 2 * dpr;
+        for (let k = 0; k < K; k++) {
+          const o = k * G;
+          const by2 = betaY + unc * p.sigS * g[o + 4];
+          mus[k] = Math.min((p.mu0 * p.dy) / Math.max(Math.abs(ay - curve(k, ax)), 1e-3), 999);
+          if (by2 <= 0) {
+            gone++;
+            continue;
+          }
+          const t = Math.sqrt(2 * by2);
+          const xs = unc * 0.012 * g[o + 3];
+          for (let s = 1; s >= -1; s -= 2) {
+            const j = s > 0 ? 5 : 7;
+            const px = xs + s * p.dx * t + 0.008 * g[o + j];
+            const py = curve(k, px) + s * p.dy * t + 0.008 * g[o + j + 1];
+            ctx.beginPath();
+            ctx.arc(X(px, py), Y(px, py), r, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        }
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.6 * dpr;
+        ctx.strokeRect(X(ax, ay) - q, Y(ax, ay) - q, 2 * q, 2 * q);
+        ctx.strokeRect(X(bx, by) - q, Y(bx, by) - q, 2 * q, 2 * q);
+
       }
-      const sorted = mus.slice().sort();
-      const p16 = sorted[Math.round(0.16 * (K - 1))];
-      const p50 = sorted[Math.round(0.5 * (K - 1))];
-      const p84 = sorted[Math.round(0.84 * (K - 1))];
-      rangeEl.setAttribute('x1', mx(p16).toFixed(1));
-      rangeEl.setAttribute('x2', mx(p84).toFixed(1));
-      medianEl.setAttribute('cx', mx(p50).toFixed(1));
-      const f = (m: number) => (m >= 100 ? '100+' : m < 10 ? m.toFixed(1) : m.toFixed(0));
-      muOut.textContent = `×${f(p50)} (${f(p16)}–${f(p84)})`;
-      goneOut.textContent = `${Math.round((100 * gone) / K)}%`;
+
+      showMu(v);
+      return gone;
+    }
+
+    function draw() {
+      const unc = Number(uncSlider.value);
+      const gone = [drawFold(views[0], unc), drawRing(views[1], unc)];
+      goneOut.textContent = `${Math.round((100 * gone[0]) / K)}%`;
+      flipOut.textContent = `${Math.round((100 * gone[1]) / K)}%`;
       slider.value = u.toFixed(3);
     }
 
@@ -451,16 +723,21 @@
     });
     pauseBtn.addEventListener('click', () => setPaused(!paused));
 
-    new ResizeObserver(() => {
+    const ro = new ResizeObserver(() => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const pw = Math.round(canvas.clientWidth * dpr);
-      const ph = Math.round(canvas.clientHeight * dpr);
-      if (pw && (pw !== canvas.width || ph !== canvas.height)) {
-        canvas.width = pw;
-        canvas.height = ph;
-        draw();
+      let changed = false;
+      for (const { canvas } of views) {
+        const pw = Math.round(canvas.clientWidth * dpr);
+        const ph = Math.round(canvas.clientHeight * dpr);
+        if (pw && (pw !== canvas.width || ph !== canvas.height)) {
+          canvas.width = pw;
+          canvas.height = ph;
+          changed = true;
+        }
       }
-    }).observe(canvas);
+      if (changed) draw();
+    });
+    views.forEach((v) => ro.observe(v.canvas));
 
     new IntersectionObserver((entries) => {
       visible = entries[0].isIntersecting;
