@@ -1,0 +1,576 @@
+---
+// A draw of the Gaussian random field used for unmodeled mass. One fixed
+// set of random phases is filtered by the knee power spectrum
+//   P(k) = A [1 + (k / k_b)^gamma]^-1,  lambda_b = 2 pi / k_b,
+// and transformed back with an FFT every time lambda_b changes, so the same
+// realization morphs as the break scale sweeps. The map is scaled to its
+// own rms; the numbers are illustrative, not a fitted model.
+const FIELD = 60; // arcsec across each cup
+const ticks = [50, 20, 10, 5, 2];
+---
+
+<div class="grf" data-grf-demo data-field={FIELD}>
+  <div class="cups">
+    <figure class="cup-fig">
+      <canvas width="256" height="256" aria-hidden="true"></canvas>
+      <span class="ruler" data-ruler aria-hidden="true"></span>
+      <figcaption>
+        <strong>One random realization</strong> of the unmodeled mass, <i>δκ</i>, drawn before any data. In a fit the
+        field is conditioned on the image positions, so the residuals the parametric lens leaves behind pin it down near
+        the images.
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="side">
+    <p class="readout" aria-live="off">
+      <span>Break scale <i>λ</i><sub>b</sub></span>
+      <strong data-lambda>–</strong>
+    </p>
+
+    <svg class="spec" viewBox="0 0 320 170" role="img" aria-label="Power spectrum of the field: flat on scales larger than the break scale, falling as a power law on smaller scales.">
+      <defs>
+        <clipPath id="grf-spec-clip"><rect x="34" y="12" width="274" height="118"></rect></clipPath>
+      </defs>
+      <rect x="34" y="12" width="274" height="118" class="spec-frame"></rect>
+      <g clip-path="url(#grf-spec-clip)">
+        <path data-spec-fill class="spec-fill"></path>
+        <path data-spec-line class="spec-line"></path>
+        <line data-spec-knee class="spec-knee" y1="12" y2="130"></line>
+      </g>
+      <text data-spec-knee-label class="spec-knee-label" y="24">λ<tspan dy="3" font-size="8">b</tspan></text>
+      {
+        ticks.map((t) => {
+          const x = 34 + (274 * Math.log(FIELD / t)) / Math.log(FIELD / 1.5);
+          return (
+            <g>
+              <line x1={x} x2={x} y1="130" y2="134" class="spec-tick" />
+              <text x={x} y="146" text-anchor="middle" class="spec-num">
+                {t}″
+              </text>
+            </g>
+          );
+        })
+      }
+      <text x="171" y="164" text-anchor="middle" class="spec-axis">angular scale λ (large → small)</text>
+      <text x="14" y="71" text-anchor="middle" transform="rotate(-90 14 71)" class="spec-axis">power (log)</text>
+    </svg>
+
+    <div class="controls">
+      <label class="slider">
+        <span><i>λ</i><sub>b</sub></span>
+        <input type="range" min="0" max="1" step="0.001" value="0.5" data-slider aria-label="Break scale of the power spectrum" />
+      </label>
+      <fieldset class="seg">
+        <legend>Slope <i>γ</i></legend>
+        {
+          [2, 4, 8].map((g) => (
+            <label>
+              <input type="radio" name="grf-gamma" value={g} checked={g === 4} />
+              <span>{g}</span>
+            </label>
+          ))
+        }
+      </fieldset>
+      <button type="button" data-reroll title="Draw a new realization">Re-roll</button>
+      <button type="button" data-pause aria-pressed="false">Pause</button>
+    </div>
+
+    <p class="legend">
+      <span class="ramp" aria-hidden="true"></span>
+      <span>less mass</span>
+      <span class="legend-right">more mass</span>
+    </p>
+  </div>
+</div>
+
+<style>
+  .grf {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 44px);
+    align-items: center;
+    margin-top: 34px;
+  }
+  .cups {
+    display: grid;
+    justify-items: center;
+  }
+  .cup-fig {
+    --rim: 7px;
+    width: min(100%, 440px);
+    margin: 0;
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+  }
+  canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: block;
+    background: var(--espresso);
+    border: var(--rim) solid #efe6d8;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      0 14px 34px rgba(0, 0, 0, 0.55),
+      inset 0 0 18px rgba(0, 0, 0, 0.5);
+  }
+  .ruler {
+    height: 7px;
+    border: 1.5px solid var(--arc);
+    border-top: 0;
+    width: calc((100% - 2 * var(--rim)) * var(--f, 0.2));
+    box-sizing: border-box;
+    margin-left: var(--rim);
+  }
+  figcaption {
+    justify-self: center;
+    text-align: center;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 44ch;
+  }
+  figcaption strong {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .side {
+    display: grid;
+    gap: 12px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    color: var(--ink-soft);
+  }
+  .readout strong {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--arc);
+  }
+  .spec {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .spec-frame {
+    fill: rgba(20, 17, 26, 0.7);
+    stroke: var(--line);
+  }
+  .spec-line {
+    fill: none;
+    stroke: var(--crema);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .spec-fill {
+    fill: rgba(224, 168, 104, 0.13);
+  }
+  .spec-knee {
+    stroke: var(--arc);
+    stroke-width: 1.2;
+    stroke-dasharray: 4 4;
+  }
+  .spec-knee-label {
+    fill: var(--arc);
+    font-size: 11px;
+    font-style: italic;
+    font-family: var(--font-display);
+  }
+  .spec-tick {
+    stroke: var(--line-strong);
+  }
+  .spec-num,
+  .spec-axis {
+    fill: var(--muted);
+    font-size: 10px;
+    font-family: var(--font-body);
+  }
+  .spec-num {
+    font-family: var(--font-mono);
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(20, 17, 26, 0.7);
+  }
+  .slider {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-soft);
+    flex: 1 1 100%;
+  }
+  .slider input {
+    flex: 1;
+    min-width: 80px;
+    accent-color: var(--crema);
+  }
+  .seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 0;
+    padding: 0;
+    margin: 0 auto 0 0;
+    color: var(--ink-soft);
+  }
+  .seg legend {
+    float: left;
+    padding: 0;
+    margin-right: 8px;
+  }
+  .seg label {
+    cursor: pointer;
+  }
+  .seg input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .seg label span {
+    display: inline-block;
+    min-width: 30px;
+    text-align: center;
+    padding: 4px 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  .seg input:checked + span {
+    background: var(--crema);
+    border-color: var(--crema);
+    color: #1c120b;
+  }
+  .seg input:focus-visible + span {
+    outline: 2px solid var(--arc);
+    outline-offset: 2px;
+  }
+  button {
+    font: inherit;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  button:hover {
+    border-color: var(--crema);
+    color: var(--ink);
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 0;
+    font-size: 12px;
+  }
+  .ramp {
+    grid-column: 1 / -1;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #170c07, #4d2b17 30%, #a86a3b 55%, #e0a868 75%, #fff6e6);
+  }
+  .legend-right {
+    text-align: right;
+  }
+  @media (max-width: 820px) {
+    .grf {
+      grid-template-columns: 1fr;
+    }
+    .cup-fig {
+      --rim: 5px;
+      width: min(100%, 360px);
+    }
+  }
+</style>
+
+<script>
+  const N = 256;
+  const LAMBDA_MIN = 3; // arcsec
+  const LAMBDA_MAX = 30;
+  const BAND_MIN = 1.5; // smallest scale kept in the field, arcsec
+  const SWEEP_PERIOD = 18000; // ms for a full there-and-back sweep
+  const IDLE_AFTER = 3500;
+
+  function mulberry32(a: number) {
+    return () => {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // In-place radix-2 FFT of length N (sign convention does not matter here:
+  // the input is random complex noise).
+  const LOG_N = Math.log2(N);
+  const rev = new Uint16Array(N);
+  for (let i = 0; i < N; i++) {
+    let r = 0;
+    for (let b = 0; b < LOG_N; b++) r |= ((i >> b) & 1) << (LOG_N - 1 - b);
+    rev[i] = r;
+  }
+  const cosT = new Float32Array(N / 2);
+  const sinT = new Float32Array(N / 2);
+  for (let i = 0; i < N / 2; i++) {
+    cosT[i] = Math.cos((2 * Math.PI * i) / N);
+    sinT[i] = Math.sin((2 * Math.PI * i) / N);
+  }
+  function fft(re: Float32Array, im: Float32Array) {
+    for (let i = 0; i < N; i++) {
+      const j = rev[i];
+      if (j > i) {
+        let t = re[i];
+        re[i] = re[j];
+        re[j] = t;
+        t = im[i];
+        im[i] = im[j];
+        im[j] = t;
+      }
+    }
+    for (let size = 2; size <= N; size <<= 1) {
+      const half = size >> 1;
+      const step = N / size;
+      for (let s = 0; s < N; s += size) {
+        for (let j = 0, k = 0; j < half; j++, k += step) {
+          const a = s + j;
+          const b = a + half;
+          const tr = re[b] * cosT[k] - im[b] * sinT[k];
+          const ti = re[b] * sinT[k] + im[b] * cosT[k];
+          re[b] = re[a] - tr;
+          im[b] = im[a] - ti;
+          re[a] += tr;
+          im[a] += ti;
+        }
+      }
+    }
+  }
+
+  // Espresso to milk foam.
+  const STOPS: [number, number, number, number][] = [
+    [0, 23, 12, 7],
+    [0.3, 77, 43, 23],
+    [0.55, 168, 106, 59],
+    [0.75, 224, 168, 104],
+    [1, 255, 246, 230],
+  ];
+  const LUT = new Uint8ClampedArray(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    const u = i / 255;
+    let s = 0;
+    while (s < STOPS.length - 2 && u > STOPS[s + 1][0]) s++;
+    const a = STOPS[s];
+    const b = STOPS[s + 1];
+    const f = (u - a[0]) / (b[0] - a[0]);
+    for (let c = 0; c < 3; c++) LUT[i * 3 + c] = a[c + 1] + (b[c + 1] - a[c + 1]) * f;
+  }
+
+  function init(root: HTMLElement) {
+    const FIELD = Number(root.dataset.field);
+    const canvases = [...root.querySelectorAll('canvas')];
+    const ctxs = canvases.map((c) => c.getContext('2d')!);
+    const rulers = [...root.querySelectorAll<HTMLElement>('[data-ruler]')];
+    const slider = root.querySelector<HTMLInputElement>('[data-slider]')!;
+    const lambdaOut = root.querySelector<HTMLElement>('[data-lambda]')!;
+    const pauseBtn = root.querySelector<HTMLButtonElement>('[data-pause]')!;
+    const specLine = root.querySelector<SVGPathElement>('[data-spec-line]')!;
+    const specFill = root.querySelector<SVGPathElement>('[data-spec-fill]')!;
+    const specKnee = root.querySelector<SVGLineElement>('[data-spec-knee]')!;
+    const specKneeLabel = root.querySelector<SVGTextElement>('[data-spec-knee-label]')!;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const K_MIN = (2 * Math.PI) / FIELD;
+    const K_MAX = (2 * Math.PI) / BAND_MIN;
+
+    // |k|^2 on the FFT grid, in arcsec^-2.
+    const ksq = new Float32Array(N * N);
+    for (let j = 0; j < N; j++) {
+      const ky = (j < N / 2 ? j : j - N) * K_MIN;
+      for (let i = 0; i < N; i++) {
+        const kx = (i < N / 2 ? i : i - N) * K_MIN;
+        ksq[j * N + i] = kx * kx + ky * ky;
+      }
+    }
+
+    let seed = 20260;
+    let noise: { re: Float32Array; im: Float32Array }[] = [];
+    function roll() {
+      const rnd = mulberry32(seed);
+      noise = canvases.map(() => {
+        const re = new Float32Array(N * N);
+        const im = new Float32Array(N * N);
+        for (let i = 0; i < N * N; i++) {
+          const r = Math.sqrt(-2 * Math.log(1 - rnd()));
+          const p = 2 * Math.PI * rnd();
+          re[i] = r * Math.cos(p);
+          im[i] = r * Math.sin(p);
+        }
+        return { re, im };
+      });
+    }
+
+    const amp = new Float32Array(N * N);
+    const fre = new Float32Array(N * N);
+    const fim = new Float32Array(N * N);
+    const colRe = new Float32Array(N);
+    const colIm = new Float32Array(N);
+    const image = new ImageData(N, N);
+
+    let gamma = 4;
+    let u = 0.5; // position of lambda_b between its limits, in log
+    const lambdaOf = (v: number) => LAMBDA_MIN * Math.pow(LAMBDA_MAX / LAMBDA_MIN, v);
+
+    function render() {
+      const lambda = lambdaOf(u);
+      const kb = (2 * Math.PI) / lambda;
+      const kb2 = kb * kb;
+      const kmin2 = K_MIN * K_MIN * 0.999;
+      const kmax2 = K_MAX * K_MAX;
+      for (let i = 0; i < N * N; i++) {
+        const q = ksq[i];
+        amp[i] = q < kmin2 || q > kmax2 ? 0 : 1 / Math.sqrt(1 + Math.pow(q / kb2, gamma / 2));
+      }
+
+      for (let c = 0; c < canvases.length; c++) {
+        const { re, im } = noise[c];
+        for (let i = 0; i < N * N; i++) {
+          fre[i] = re[i] * amp[i];
+          fim[i] = im[i] * amp[i];
+        }
+        for (let j = 0; j < N; j++) fft(fre.subarray(j * N, (j + 1) * N), fim.subarray(j * N, (j + 1) * N));
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            colRe[j] = fre[j * N + i];
+            colIm[j] = fim[j * N + i];
+          }
+          fft(colRe, colIm);
+          for (let j = 0; j < N; j++) fre[j * N + i] = colRe[j];
+        }
+        let ss = 0;
+        for (let i = 0; i < N * N; i++) ss += fre[i] * fre[i];
+        const scale = 255 / (5 * Math.sqrt(ss / (N * N)) || 1); // clip at +-2.5 rms
+        const data = image.data;
+        for (let i = 0; i < N * N; i++) {
+          let v = (127.5 + fre[i] * scale) | 0;
+          v = v < 0 ? 0 : v > 255 ? 255 : v;
+          data[i * 4] = LUT[v * 3];
+          data[i * 4 + 1] = LUT[v * 3 + 1];
+          data[i * 4 + 2] = LUT[v * 3 + 2];
+          data[i * 4 + 3] = 255;
+        }
+        ctxs[c].putImageData(image, 0, 0);
+      }
+
+      // Spectrum plot: x is log k across the band, y is log10 P/A over six decades.
+      const X0 = 34;
+      const W = 274;
+      const Y0 = 24;
+      const DEC = 17;
+      const span = Math.log(K_MAX / K_MIN);
+      let d = '';
+      for (let s = 0; s <= 64; s++) {
+        const k = K_MIN * Math.exp((span * s) / 64);
+        const y = Y0 + DEC * Math.log10(1 + Math.pow(k / kb, gamma));
+        d += `${s ? 'L' : 'M'}${(X0 + (W * s) / 64).toFixed(1)} ${Math.min(y, 140).toFixed(1)}`;
+      }
+      specLine.setAttribute('d', d);
+      specFill.setAttribute('d', `${d}L${X0 + W} 140L${X0} 140Z`);
+      const xk = X0 + (W * Math.log(kb / K_MIN)) / span;
+      specKnee.setAttribute('x1', xk.toFixed(1));
+      specKnee.setAttribute('x2', xk.toFixed(1));
+      specKneeLabel.setAttribute('x', (xk + 5).toFixed(1));
+
+      for (const r of rulers) r.style.setProperty('--f', (lambda / FIELD).toFixed(4));
+      lambdaOut.textContent = `${lambda.toFixed(1)}″`;
+      slider.value = u.toFixed(3);
+    }
+
+    let paused = reduceMotion;
+    let visible = false;
+    let lastInput = -Infinity;
+    let phase = Math.PI / 2; // u = 0.5 - 0.5 cos(phase)
+    let last = 0;
+    let raf = 0;
+
+    function frame(now: number) {
+      raf = 0;
+      const dt = Math.min(now - last, 100);
+      last = now;
+      if (!paused && now - lastInput > IDLE_AFTER) {
+        phase += (2 * Math.PI * dt) / SWEEP_PERIOD;
+        u = 0.5 - 0.5 * Math.cos(phase);
+        render();
+      }
+      schedule();
+    }
+    function schedule() {
+      if (!raf && visible && !paused) {
+        raf = requestAnimationFrame((t) => {
+          if (!last) last = t;
+          frame(t);
+        });
+      }
+    }
+    function touch() {
+      lastInput = performance.now();
+    }
+    function setPaused(p: boolean) {
+      paused = p;
+      pauseBtn.textContent = p ? 'Play' : 'Pause';
+      pauseBtn.setAttribute('aria-pressed', String(p));
+      if (!p) {
+        last = 0;
+        lastInput = -Infinity;
+        schedule();
+      }
+    }
+
+    slider.addEventListener('input', () => {
+      u = Number(slider.value);
+      // Resume the sweep from here, still heading the same way.
+      const rising = Math.sin(phase) >= 0;
+      const a = Math.acos(1 - 2 * u);
+      phase = rising ? a : 2 * Math.PI - a;
+      touch();
+      render();
+    });
+    root.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((r) =>
+      r.addEventListener('change', () => {
+        if (r.checked) gamma = Number(r.value);
+        render();
+      }),
+    );
+    root.querySelector('[data-reroll]')!.addEventListener('click', () => {
+      seed = (seed * 1664525 + 1013904223) | 0;
+      roll();
+      render();
+    });
+    pauseBtn.addEventListener('click', () => setPaused(!paused));
+
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      last = 0;
+      schedule();
+    }).observe(root);
+
+    roll();
+    setPaused(paused);
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-grf-demo]').forEach(init);
+</script>

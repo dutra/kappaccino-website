@@ -4,6 +4,7 @@ import katex from 'katex';
 import Base from '../layouts/Base.astro';
 import Logo from '../components/Logo.astro';
 import LensToy from '../components/LensToy.astro';
+import GrfDemo from '../components/GrfDemo.astro';
 
 const GITHUB = 'https://github.com/dutra/kappaccino';
 const DOCS = 'https://kappaccino.readthedocs.io/';
@@ -347,7 +348,7 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
           </ul>
           <p class="aside">
             Try it in the toy above: turn up <em>Unmodeled mass</em> and watch nearby images shift together while the critical
-            curves wobble.
+            curves wobble. The field itself is on show{' '}<a href="#foam">further down</a>.
           </p>
         </article>
 
@@ -376,6 +377,52 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
             }
           </ol>
         </article>
+      </div>
+    </section>
+
+    <!-- ───────────── Random field ───────────── -->
+    <section id="foam" class="foam">
+      <div class="wrap">
+        <p class="eyebrow">Latte art</p>
+        <h2 class="section-title">The mass you didn’t model</h2>
+        <p class="section-lede">
+          No recipe of halos and galaxies accounts for every clump in a cluster. kappaccino describes what is left over
+          statistically, as a Gaussian random field: one power spectrum instead of one more component per clump.
+        </p>
+
+        <GrfDemo />
+
+        <div class="foam-notes">
+          <div>
+            <div class="eq eq-left" set:html={tex('P_\\kappa(k)=A_\\kappa\\left[1+\\left(\\frac{k}{k_{\\rm b}}\\right)^{\\gamma_\\kappa}\\right]^{-1},\\qquad \\lambda_{\\rm b}=\\frac{2\\pi}{k_{\\rm b}}', true)} />
+            <p>
+              The cup holds one draw of the convergence perturbation{' '}<span set:html={tex('\\delta\\kappa')} />{' '}from this
+              spectrum. The bar under it is one{' '}<span set:html={tex('\\lambda_{\\rm b}')} />{' '}long, and Re-roll pours a
+              new draw. Leave it alone and the break scale sweeps back and
+              forth on its own.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <strong>Above the break</strong> the power is flat, like the shot noise of compact clumps scattered at random.
+            </li>
+            <li>
+              <strong>Below the break</strong> it falls as{' '}<span set:html={tex('k^{-\\gamma_\\kappa}')} />. The slope follows
+              the inner profile of the clumps: steeper for cored ones, shallower for cuspy ones.
+            </li>
+            <li>
+              <strong>For the images</strong>, two that sit much closer than{' '}<span set:html={tex('\\lambda_{\\rm b}')} />{' '}
+              are pushed together, and two much farther apart are pushed independently.
+            </li>
+            <li>
+              <strong>In a fit</strong>, the amplitude (an rms deflection{' '}<span set:html={tex('\\sigma_{\\rm GRF}')} />, in
+              arcseconds) and{' '}<span set:html={tex('\\lambda_{\\rm b}')} />{' '}are inferred together with the lens.
+            </li>
+          </ul>
+        </div>
+        <p class="aside">
+          This is an illustrative draw on a 60″ field, scaled to its own rms. It is not a fitted model.
+        </p>
       </div>
     </section>
 
@@ -1112,5 +1159,39 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
   }
   .foot-links a:hover {
     color: var(--crema-bright);
+  }
+  /* ── random field ── */
+  .foam-notes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 44px);
+    margin-top: 38px;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .foam-notes ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .foam-notes li {
+    padding-left: 16px;
+    border-left: 2px solid var(--roast);
+  }
+  .foam-notes strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .foam .aside a,
+  .aside a {
+    color: var(--crema-bright);
+  }
+  @media (max-width: 820px) {
+    .foam-notes {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
