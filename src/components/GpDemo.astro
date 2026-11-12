@@ -1,0 +1,479 @@
+---
+// A draw of the image-plane Gaussian process: a 2D displacement field whose
+// two components are independent, each with a squared-exponential kernel
+//   k(r) = sigma^2 exp(-r^2 / 2 l^2).
+// One fixed set of random phases is filtered by the kernel's spectrum and
+// transformed back whenever l changes, so the same realization morphs as the
+// correlation length sweeps. Arrow lengths are exaggerated and scaled to a
+// fixed rms; the numbers are illustrative, not a fitted model.
+const FIELD = 60; // arcsec across the cup
+const R_MAX = 30; // arcsec, right edge of the kernel plot
+const ticks = [0, 10, 20, 30];
+---
+
+<div class="gp" data-gp-demo data-field={FIELD} data-rmax={R_MAX}>
+  <div class="cups">
+    <figure class="cup-fig">
+      <canvas aria-hidden="true"></canvas>
+      <span class="ruler" data-ruler aria-hidden="true"></span>
+      <figcaption>
+        <strong>One random realization</strong> of the image-plane shifts, drawn before any data. Dots are made-up image
+        positions and arrows their shifts, enlarged to be visible. The faint arrows show the field everywhere else.
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="side">
+    <p class="readout">
+      <span>Correlation length <i>ℓ</i><sub>GP</sub></span>
+      <strong data-length>–</strong>
+    </p>
+
+    <svg class="spec" viewBox="0 0 320 170" role="img" aria-label="Correlation between the shifts of two images against their separation: close to one for images much nearer than the correlation length, falling to zero for images much farther apart.">
+      <defs>
+        <clipPath id="gp-kernel-clip"><rect x="34" y="12" width="274" height="118"></rect></clipPath>
+      </defs>
+      <rect x="34" y="12" width="274" height="118" class="spec-frame"></rect>
+      <g clip-path="url(#gp-kernel-clip)">
+        <path data-kernel-fill class="spec-fill"></path>
+        <path data-kernel-line class="spec-line"></path>
+        <line data-kernel-mark class="spec-knee" y1="12" y2="130"></line>
+      </g>
+      <text data-kernel-label class="spec-knee-label" y="24">ℓ<tspan dy="3" font-size="8">GP</tspan></text>
+      {
+        ticks.map((t) => {
+          const x = 34 + (274 * t) / R_MAX;
+          return (
+            <g>
+              <line x1={x} x2={x} y1="130" y2="134" class="spec-tick" />
+              <text x={x} y="146" text-anchor="middle" class="spec-num">
+                {t}″
+              </text>
+            </g>
+          );
+        })
+      }
+      <text x="30" y="26" text-anchor="end" class="spec-num">1</text>
+      <text x="30" y="133" text-anchor="end" class="spec-num">0</text>
+      <text x="171" y="164" text-anchor="middle" class="spec-axis">separation between two images</text>
+      <text x="14" y="71" text-anchor="middle" transform="rotate(-90 14 71)" class="spec-axis">correlation</text>
+    </svg>
+
+    <div class="controls">
+      <label class="slider">
+        <span><i>ℓ</i><sub>GP</sub></span>
+        <input type="range" min="0" max="1" step="0.001" value="0.5" data-slider aria-label="Correlation length of the image-plane shifts" />
+      </label>
+      <button type="button" data-reroll title="Draw a new realization">Re-roll</button>
+      <button type="button" data-pause aria-pressed="false">Pause</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .gp {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 44px);
+    align-items: center;
+    margin-top: 34px;
+  }
+  .cups {
+    display: grid;
+    justify-items: center;
+  }
+  .cup-fig {
+    --rim: 7px;
+    width: min(100%, 440px);
+    margin: 0;
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+  }
+  canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: block;
+    box-sizing: border-box;
+    background: #07060b;
+    border: var(--rim) solid #efe6d8;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      0 14px 34px rgba(0, 0, 0, 0.55),
+      inset 0 0 18px rgba(0, 0, 0, 0.5);
+  }
+  .ruler {
+    height: 7px;
+    border: 1.5px solid var(--arc);
+    border-top: 0;
+    width: calc((100% - 2 * var(--rim)) * var(--f, 0.1));
+    box-sizing: border-box;
+    margin-left: var(--rim);
+  }
+  figcaption {
+    justify-self: center;
+    text-align: center;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 46ch;
+  }
+  figcaption strong {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .side {
+    display: grid;
+    gap: 12px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    color: var(--ink-soft);
+  }
+  .readout strong {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--arc);
+  }
+  .spec {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .spec-frame {
+    fill: rgba(20, 17, 26, 0.7);
+    stroke: var(--line);
+  }
+  .spec-line {
+    fill: none;
+    stroke: var(--crema);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .spec-fill {
+    fill: rgba(224, 168, 104, 0.13);
+  }
+  .spec-knee {
+    stroke: var(--arc);
+    stroke-width: 1.2;
+    stroke-dasharray: 4 4;
+  }
+  .spec-knee-label {
+    fill: var(--arc);
+    font-size: 11px;
+    font-style: italic;
+    font-family: var(--font-display);
+  }
+  .spec-tick {
+    stroke: var(--line-strong);
+  }
+  .spec-num,
+  .spec-axis {
+    fill: var(--muted);
+    font-size: 10px;
+    font-family: var(--font-body);
+  }
+  .spec-num {
+    font-family: var(--font-mono);
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(20, 17, 26, 0.7);
+  }
+  .slider {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-soft);
+    flex: 1 1 160px;
+  }
+  .slider input {
+    flex: 1;
+    min-width: 80px;
+    accent-color: var(--crema);
+  }
+  button {
+    font: inherit;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  button:hover {
+    border-color: var(--crema);
+    color: var(--ink);
+  }
+  @media (max-width: 820px) {
+    .gp {
+      grid-template-columns: 1fr;
+    }
+    .cup-fig {
+      --rim: 5px;
+      width: min(100%, 360px);
+    }
+  }
+</style>
+
+<script>
+  import { gaussianNoise, makeFft2, mulberry32 } from '../lib/field';
+
+  const N = 64;
+  const LENGTH_MIN = 2; // arcsec
+  const LENGTH_MAX = 14;
+  const SWEEP_PERIOD = 18000; // ms for a full there-and-back sweep
+  const IDLE_AFTER = 3500;
+  const ARROW_RMS = 0.05; // rms arrow length per component, as a fraction of the cup
+  const GRID = 19; // faint background arrows per side
+  const N_IMAGES = 34;
+
+  const fft2 = makeFft2(N);
+
+  function init(root: HTMLElement) {
+    const FIELD = Number(root.dataset.field);
+    const R_MAX = Number(root.dataset.rmax);
+    const canvas = root.querySelector('canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const ruler = root.querySelector<HTMLElement>('[data-ruler]')!;
+    const slider = root.querySelector<HTMLInputElement>('[data-slider]')!;
+    const lengthOut = root.querySelector<HTMLElement>('[data-length]')!;
+    const pauseBtn = root.querySelector<HTMLButtonElement>('[data-pause]')!;
+    const kLine = root.querySelector<SVGPathElement>('[data-kernel-line]')!;
+    const kFill = root.querySelector<SVGPathElement>('[data-kernel-fill]')!;
+    const kMark = root.querySelector<SVGLineElement>('[data-kernel-mark]')!;
+    const kLabel = root.querySelector<SVGTextElement>('[data-kernel-label]')!;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const K0 = (2 * Math.PI) / FIELD;
+    const ksq = new Float32Array(N * N);
+    for (let j = 0; j < N; j++) {
+      const ky = (j < N / 2 ? j : j - N) * K0;
+      for (let i = 0; i < N; i++) {
+        const kx = (i < N / 2 ? i : i - N) * K0;
+        ksq[j * N + i] = kx * kx + ky * ky;
+      }
+    }
+
+    // Made-up image positions, in units of the cup width from its centre.
+    const images: [number, number][] = [];
+    {
+      const rnd = mulberry32(77);
+      while (images.length < N_IMAGES) {
+        const x = rnd() - 0.5;
+        const y = rnd() - 0.5;
+        if (Math.hypot(x, y) < 0.44) images.push([x, y]);
+      }
+    }
+
+    let seed = 4242;
+    const nre = new Float32Array(N * N);
+    const nim = new Float32Array(N * N);
+    const roll = () => gaussianNoise(mulberry32(seed), nre, nim);
+
+    // After the transform, the real part is the x shift and the imaginary part the y shift.
+    const dx = new Float32Array(N * N);
+    const dy = new Float32Array(N * N);
+    let norm = 1;
+
+    let u = 0.5; // position of the correlation length between its limits, in log
+    const lengthOf = (v: number) => LENGTH_MIN * Math.pow(LENGTH_MAX / LENGTH_MIN, v);
+
+    function sample(f: Float32Array, x: number, y: number) {
+      // Bilinear, periodic; x and y in grid cells.
+      const i0 = Math.floor(x);
+      const j0 = Math.floor(y);
+      const fx = x - i0;
+      const fy = y - j0;
+      const i = ((i0 % N) + N) % N;
+      const j = ((j0 % N) + N) % N;
+      const i1 = (i + 1) % N;
+      const j1 = (j + 1) % N;
+      return (
+        f[j * N + i] * (1 - fx) * (1 - fy) + f[j * N + i1] * fx * (1 - fy) + f[j1 * N + i] * (1 - fx) * fy + f[j1 * N + i1] * fx * fy
+      );
+    }
+
+    function arrow(x: number, y: number, vx: number, vy: number, head: number) {
+      const len = Math.hypot(vx, vy);
+      if (len < 0.5) return;
+      const ex = x + vx;
+      const ey = y + vy;
+      const h = Math.min(head, len * 0.5);
+      const ux = vx / len;
+      const uy = vy / len;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(ex, ey);
+      ctx.moveTo(ex - h * (ux * 0.87 - uy * 0.5), ey - h * (uy * 0.87 + ux * 0.5));
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(ex - h * (ux * 0.87 + uy * 0.5), ey - h * (uy * 0.87 - ux * 0.5));
+      ctx.stroke();
+    }
+
+    function compute() {
+      const len = lengthOf(u);
+      const q = (len * len) / 4; // amplitude is the square root of exp(-k^2 l^2 / 2)
+      for (let i = 0; i < N * N; i++) {
+        const a = ksq[i] === 0 ? 0 : Math.exp(-ksq[i] * q);
+        dx[i] = nre[i] * a;
+        dy[i] = nim[i] * a;
+      }
+      fft2(dx, dy);
+      let ss = 0;
+      for (let i = 0; i < N * N; i++) ss += dx[i] * dx[i] + dy[i] * dy[i];
+      norm = 1 / (Math.sqrt(ss / (2 * N * N)) || 1);
+    }
+
+    function draw() {
+      const size = canvas.width;
+      if (!size) return;
+      const dpr = size / (canvas.clientWidth || size);
+      const s = ARROW_RMS * size * norm;
+      ctx.clearRect(0, 0, size, size);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.strokeStyle = 'rgba(143, 199, 255, 0.5)';
+      ctx.lineWidth = 1 * dpr;
+      for (let gj = 0; gj < GRID; gj++) {
+        for (let gi = 0; gi < GRID; gi++) {
+          const x = (gi + 0.5) / GRID;
+          const y = (gj + 0.5) / GRID;
+          if (Math.hypot(x - 0.5, y - 0.5) > 0.5) continue;
+          const vx = sample(dx, x * N, y * N) * s * 0.5;
+          const vy = sample(dy, x * N, y * N) * s * 0.5;
+          arrow(x * size - vx / 2, y * size - vy / 2, vx, vy, 3.5 * dpr);
+        }
+      }
+
+      for (const [ix, iy] of images) {
+        const x = (ix + 0.5) * size;
+        const y = (iy + 0.5) * size;
+        const vx = sample(dx, (ix + 0.5) * N, (iy + 0.5) * N) * s;
+        const vy = sample(dy, (ix + 0.5) * N, (iy + 0.5) * N) * s;
+        ctx.strokeStyle = '#f2c891';
+        ctx.lineWidth = 1.8 * dpr;
+        arrow(x, y, vx, vy, 6 * dpr);
+        ctx.fillStyle = '#fff6e6';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.6 * dpr, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    function render() {
+      const len = lengthOf(u);
+      compute();
+      draw();
+
+      // Kernel plot: correlation exp(-r^2 / 2 l^2) against separation r.
+      const X0 = 34;
+      const W = 274;
+      const YTOP = 22;
+      const YBOT = 130;
+      let d = '';
+      for (let i = 0; i <= 64; i++) {
+        const r = (R_MAX * i) / 64;
+        const c = Math.exp((-r * r) / (2 * len * len));
+        d += `${i ? 'L' : 'M'}${(X0 + (W * i) / 64).toFixed(1)} ${(YBOT - (YBOT - YTOP) * c).toFixed(1)}`;
+      }
+      kLine.setAttribute('d', d);
+      kFill.setAttribute('d', `${d}L${X0 + W} ${YBOT}L${X0} ${YBOT}Z`);
+      const xm = X0 + (W * len) / R_MAX;
+      kMark.setAttribute('x1', xm.toFixed(1));
+      kMark.setAttribute('x2', xm.toFixed(1));
+      kLabel.setAttribute('x', (xm + 5).toFixed(1));
+
+      ruler.style.setProperty('--f', (len / FIELD).toFixed(4));
+      lengthOut.textContent = `${len.toFixed(1)}″`;
+      slider.value = u.toFixed(3);
+    }
+
+    let paused = reduceMotion;
+    let visible = false;
+    let lastInput = -Infinity;
+    let phase = Math.PI / 2; // u = 0.5 - 0.5 cos(phase)
+    let last = 0;
+    let raf = 0;
+
+    function frame(now: number) {
+      raf = 0;
+      const dt = Math.min(now - last, 100);
+      last = now;
+      if (!paused && now - lastInput > IDLE_AFTER) {
+        phase += (2 * Math.PI * dt) / SWEEP_PERIOD;
+        u = 0.5 - 0.5 * Math.cos(phase);
+        render();
+      }
+      schedule();
+    }
+    function schedule() {
+      if (!raf && visible && !paused) {
+        raf = requestAnimationFrame((t) => {
+          if (!last) last = t;
+          frame(t);
+        });
+      }
+    }
+    function setPaused(p: boolean) {
+      paused = p;
+      pauseBtn.textContent = p ? 'Play' : 'Pause';
+      pauseBtn.setAttribute('aria-pressed', String(p));
+      if (!p) {
+        last = 0;
+        lastInput = -Infinity;
+        schedule();
+      }
+    }
+
+    slider.addEventListener('input', () => {
+      u = Number(slider.value);
+      // Resume the sweep from here, still heading the same way.
+      const rising = Math.sin(phase) >= 0;
+      const a = Math.acos(1 - 2 * u);
+      phase = rising ? a : 2 * Math.PI - a;
+      lastInput = performance.now();
+      render();
+    });
+    root.querySelector('[data-reroll]')!.addEventListener('click', () => {
+      seed = (seed * 1664525 + 1013904223) | 0;
+      roll();
+      render();
+    });
+    pauseBtn.addEventListener('click', () => setPaused(!paused));
+
+    new ResizeObserver(() => {
+      const px = Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2));
+      if (px && px !== canvas.width) {
+        canvas.width = px;
+        canvas.height = px;
+        draw();
+      }
+    }).observe(canvas);
+
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      last = 0;
+      schedule();
+    }).observe(root);
+
+    roll();
+    setPaused(paused);
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-gp-demo]').forEach(init);
+</script>

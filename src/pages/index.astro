@@ -5,6 +5,7 @@ import Base from '../layouts/Base.astro';
 import Logo from '../components/Logo.astro';
 import LensToy from '../components/LensToy.astro';
 import GrfDemo from '../components/GrfDemo.astro';
+import GpDemo from '../components/GpDemo.astro';
 
 const GITHUB = 'https://github.com/dutra/kappaccino';
 const DOCS = 'https://kappaccino.readthedocs.io/';
@@ -348,7 +349,8 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
           </ul>
           <p class="aside">
             Try it in the toy above: turn up <em>Unmodeled mass</em> and watch nearby images shift together while the critical
-            curves wobble. The field itself is on show{' '}<a href="#foam">further down</a>.
+            curves wobble. The <a href="#foam">mass field</a> and the{' '}
+            <a href="#shifts">image-plane shifts</a>{' '}each get a demo further down.
           </p>
         </article>
 
@@ -415,6 +417,12 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
               are pushed together, and two much farther apart are pushed independently.
             </li>
             <li>
+              <strong>Large errors, tight pairs.</strong> Each image can be off by a lot, yet close images such as a fold
+              pair still move together, because both sit inside the same blob of the field and feel nearly the same
+              deflection. The field can carry the pair along but cannot change the separation between its two images, so
+              that separation keeps constraining the lens.
+            </li>
+            <li>
               <strong>In a fit</strong>, the amplitude (an rms deflection{' '}<span set:html={tex('\\sigma_{\\rm GRF}')} />, in
               arcseconds) and{' '}<span set:html={tex('\\lambda_{\\rm b}')} />{' '}are inferred together with the lens.
             </li>
@@ -422,6 +430,54 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
         </div>
         <p class="aside">
           This is an illustrative draw on a 60″ field, scaled to its own rms. It is not a fitted model.
+        </p>
+      </div>
+    </section>
+
+    <!-- ───────────── Image-plane GP ───────────── -->
+    <section id="shifts" class="foam">
+      <div class="wrap">
+        <p class="eyebrow">A shaky hand</p>
+        <h2 class="section-title">Shifts that are not mass</h2>
+        <p class="section-lede">
+          Some things nudge neighbouring images together without adding any mass to the cluster. kappaccino gives them their
+          own term, a Gaussian process acting on the image positions, so they stay out of the mass map.
+        </p>
+
+        <GpDemo />
+
+        <div class="foam-notes">
+          <div>
+            <div class="eq eq-left" set:html={tex('\\mathbf C_{ij,\\rm GP}=\\sigma_{\\rm GP}^2\\exp\\!\\left(-\\frac{|\\boldsymbol\\theta_i-\\boldsymbol\\theta_j|^2}{2\\ell_{\\rm GP}^2}\\right)\\mathbf A_i\\mathbf A_j^{\\rm T}', true)} />
+            <p>
+              The cup holds one draw of the shift field for a squared-exponential kernel. The bar under it is
+              one{' '}<span set:html={tex('\\ell_{\\rm GP}')} />{' '}long, and Re-roll pours a new draw. Leave it alone and the
+              correlation length sweeps back and forth on its own.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <strong>Where it comes from:</strong> line-of-sight structure, matching the wrong features along an extended
+              arc, and leftover astrometric distortions.
+            </li>
+            <li>
+              <strong>For the images</strong>, two that sit much closer than{' '}<span set:html={tex('\\ell_{\\rm GP}')} />{' '}
+              shift almost identically, and two much farther apart shift independently. So here too a large shift per
+              image does not loosen a close pair: both images get nearly the same shift.
+            </li>
+            <li>
+              <strong>Unlike the mass field</strong>, these shifts do not scale with source redshift, and they pass through
+              the Jacobians{' '}<span set:html={tex('\\mathbf A_i')} />, so they shrink along the stretched direction near a
+              critical curve. That is how the data tell the two apart.
+            </li>
+            <li>
+              <strong>In a fit</strong>, the typical shift{' '}<span set:html={tex('\\sigma_{\\rm GP}')} />{' '}and{' '}
+              <span set:html={tex('\\ell_{\\rm GP}')} />{' '}are inferred together with the lens.
+            </li>
+          </ul>
+        </div>
+        <p class="aside">
+          This is an illustrative draw on a 60″ field, with arrows scaled to a fixed rms length. It is not a fitted model.
         </p>
       </div>
     </section>

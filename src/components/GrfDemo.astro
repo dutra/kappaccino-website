@@ -298,6 +298,8 @@ const ticks = [50, 20, 10, 5, 2];
 </style>
 
 <script>
+  import { gaussianNoise, makeFft2, mulberry32 } from '../lib/field';
+
   const N = 256;
   const LAMBDA_MIN = 3; // arcsec
   const LAMBDA_MAX = 30;
@@ -305,60 +307,7 @@ const ticks = [50, 20, 10, 5, 2];
   const SWEEP_PERIOD = 18000; // ms for a full there-and-back sweep
   const IDLE_AFTER = 3500;
 
-  function mulberry32(a: number) {
-    return () => {
-      a |= 0;
-      a = (a + 0x6d2b79f5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  // In-place radix-2 FFT of length N (sign convention does not matter here:
-  // the input is random complex noise).
-  const LOG_N = Math.log2(N);
-  const rev = new Uint16Array(N);
-  for (let i = 0; i < N; i++) {
-    let r = 0;
-    for (let b = 0; b < LOG_N; b++) r |= ((i >> b) & 1) << (LOG_N - 1 - b);
-    rev[i] = r;
-  }
-  const cosT = new Float32Array(N / 2);
-  const sinT = new Float32Array(N / 2);
-  for (let i = 0; i < N / 2; i++) {
-    cosT[i] = Math.cos((2 * Math.PI * i) / N);
-    sinT[i] = Math.sin((2 * Math.PI * i) / N);
-  }
-  function fft(re: Float32Array, im: Float32Array) {
-    for (let i = 0; i < N; i++) {
-      const j = rev[i];
-      if (j > i) {
-        let t = re[i];
-        re[i] = re[j];
-        re[j] = t;
-        t = im[i];
-        im[i] = im[j];
-        im[j] = t;
-      }
-    }
-    for (let size = 2; size <= N; size <<= 1) {
-      const half = size >> 1;
-      const step = N / size;
-      for (let s = 0; s < N; s += size) {
-        for (let j = 0, k = 0; j < half; j++, k += step) {
-          const a = s + j;
-          const b = a + half;
-          const tr = re[b] * cosT[k] - im[b] * sinT[k];
-          const ti = re[b] * sinT[k] + im[b] * cosT[k];
-          re[b] = re[a] - tr;
-          im[b] = im[a] - ti;
-          re[a] += tr;
-          im[a] += ti;
-        }
-      }
-    }
-  }
+  const fft2 = makeFft2(N);
 
   // Espresso to milk foam.
   const STOPS: [number, number, number, number][] = [
@@ -413,12 +362,7 @@ const ticks = [50, 20, 10, 5, 2];
       noise = canvases.map(() => {
         const re = new Float32Array(N * N);
         const im = new Float32Array(N * N);
-        for (let i = 0; i < N * N; i++) {
-          const r = Math.sqrt(-2 * Math.log(1 - rnd()));
-          const p = 2 * Math.PI * rnd();
-          re[i] = r * Math.cos(p);
-          im[i] = r * Math.sin(p);
-        }
+        gaussianNoise(rnd, re, im);
         return { re, im };
       });
     }
@@ -426,8 +370,6 @@ const ticks = [50, 20, 10, 5, 2];
     const amp = new Float32Array(N * N);
     const fre = new Float32Array(N * N);
     const fim = new Float32Array(N * N);
-    const colRe = new Float32Array(N);
-    const colIm = new Float32Array(N);
     const image = new ImageData(N, N);
 
     let gamma = 4;
@@ -451,15 +393,7 @@ const ticks = [50, 20, 10, 5, 2];
           fre[i] = re[i] * amp[i];
           fim[i] = im[i] * amp[i];
         }
-        for (let j = 0; j < N; j++) fft(fre.subarray(j * N, (j + 1) * N), fim.subarray(j * N, (j + 1) * N));
-        for (let i = 0; i < N; i++) {
-          for (let j = 0; j < N; j++) {
-            colRe[j] = fre[j * N + i];
-            colIm[j] = fim[j * N + i];
-          }
-          fft(colRe, colIm);
-          for (let j = 0; j < N; j++) fre[j * N + i] = colRe[j];
-        }
+        fft2(fre, fim);
         let ss = 0;
         for (let i = 0; i < N * N; i++) ss += fre[i] * fre[i];
         const scale = 255 / (5 * Math.sqrt(ss / (N * N)) || 1); // clip at +-2.5 rms
