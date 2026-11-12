@@ -7,6 +7,7 @@ import LensToy from '../components/LensToy.astro';
 import GrfDemo from '../components/GrfDemo.astro';
 import GpDemo from '../components/GpDemo.astro';
 import ScalingDemo from '../components/ScalingDemo.astro';
+import FoldDemo from '../components/FoldDemo.astro';
 
 const GITHUB = 'https://github.com/dutra/kappaccino';
 const DOCS = 'https://kappaccino.readthedocs.io/';
@@ -530,6 +531,54 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
         </div>
         <p class="aside">
           This is an illustrative draw on a 60″ field, with arrows scaled to a fixed rms length. It is not a fitted model.
+        </p>
+      </div>
+    </section>
+
+    <!-- ───────────── Uncertainty on images and critical curves ───────────── -->
+    <section id="error-bars" class="foam">
+      <div class="wrap">
+        <p class="eyebrow">Served with error bars</p>
+        <h2 class="section-title">Images and critical curves, give or take</h2>
+        <p class="section-lede">
+          kappaccino tries to capture what can go wrong in a lens model and carry it all the way to the answers. Every image
+          position comes back with its uncertainty, and so does every critical curve.
+        </p>
+
+        <FoldDemo />
+
+        <div class="foam-notes">
+          <div>
+            <p>
+              The demo shows a fold pair: two images of the same source on opposite sides of a critical curve. Each dot is
+              where one plausible model puts an image, and the band is where those models put the curve. Leave it alone and
+              the pair slides toward the curve and back.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <strong>Stretched, not round.</strong> Near a critical curve a small change in the deflection moves an image a
+              long way, mostly along the stretched direction. The position uncertainty becomes elongated, and can turn curved
+              or even split.
+            </li>
+            <li>
+              <strong>Same place, different magnification.</strong> Two models can put an image at nearly the same position
+              and the critical curve in different places. The magnification then changes far more than the position, so a
+              small rms is no guarantee of a good magnification.
+            </li>
+            <li>
+              <strong>Fold pairs pin the curve.</strong> Their separation and opposite parities constrain where the curve
+              passes between them, which is why the band is narrowest at the pair.
+            </li>
+            <li>
+              <strong>Checked the long way.</strong> The likelihood uses a local expansion of the lens mapping, which can
+              fail this close to a critical curve. So kappaccino also solves the lens equation for posterior draws and looks
+              at the recovered images directly.
+            </li>
+          </ul>
+        </div>
+        <p class="aside">
+          This is a toy fold with made-up numbers, drawn to show the behaviour. It is not a kappaccino model of a real cluster.
         </p>
       </div>
     </section>
