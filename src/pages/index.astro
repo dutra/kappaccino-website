@@ -1,0 +1,1116 @@
+---
+import { Code } from 'astro:components';
+import katex from 'katex';
+import Base from '../layouts/Base.astro';
+import Logo from '../components/Logo.astro';
+import LensToy from '../components/LensToy.astro';
+
+const GITHUB = 'https://github.com/dutra/kappaccino';
+const DOCS = 'https://kappaccino.readthedocs.io/';
+
+const tex = (s: string, display = false) => katex.renderToString(s, { displayMode: display, throwOnError: true });
+
+const features = [
+  {
+    glyph: 'β',
+    title: 'No lens equation in the loop',
+    body: 'A local image-plane likelihood back-projects each image once instead of solving the lens equation at every step. It is fast, smooth, and differentiable.',
+  },
+  {
+    glyph: 'C',
+    title: 'Correlated positional errors',
+    body: 'Unmodeled mass nudges neighbouring images together. kappaccino infers those correlations within and between image families rather than assuming independent errors.',
+  },
+  {
+    glyph: 'δψ',
+    title: 'Unmodeled mass, modeled',
+    body: 'A Gaussian random field with a ΛCDM-informed power spectrum stands in for the mass the parametric model misses, and carries its uncertainty into the mass and magnification maps.',
+  },
+  {
+    glyph: 'σ★',
+    title: 'Every member gets a say',
+    body: 'Each cluster galaxy may deviate from the luminosity scaling relations while still informing the population parameters and their intrinsic scatter.',
+  },
+  {
+    glyph: 'λ',
+    title: 'Honest near critical curves',
+    body: 'Positional uncertainty is stretched along giant arcs, as it should be. The covariance stays well behaved even where the lensing Jacobian is singular.',
+  },
+  {
+    glyph: '∇',
+    title: 'Gradients all the way down',
+    body: 'Written in JAX with NumPyro: automatic differentiation, just-in-time compilation, and the No-U-Turn Sampler over hundreds of parameters at once.',
+  },
+];
+
+const ingredients = [
+  { coffee: 'Espresso', sym: '\\psi_h', name: 'Cluster-scale halos', note: 'dPIE or elliptical NFW, sampled freely.' },
+  { coffee: 'Steamed milk', sym: '\\psi_s', name: 'Member-galaxy subhalos', note: 'dPIE profiles on hierarchical scaling relations.' },
+  { coffee: 'A swirl', sym: '\\psi_{\\rm ext}', name: 'External shear', note: 'The tidal pull of everything outside the frame, plus an optional mass sheet.' },
+  { coffee: 'Foam', sym: '\\delta\\psi', name: 'Unmodeled mass', note: 'A Gaussian random field for what the parametric pieces leave out.' },
+];
+
+const errors = [
+  {
+    sym: '\\mathbf C_{\\rm meas}',
+    title: 'Measurement',
+    body: 'Independent scatter in each catalogued position, propagated to the source plane through the lensing Jacobian. Its amplitude is inferred, not fixed in advance.',
+    tag: 'independent',
+  },
+  {
+    sym: '\\mathbf C_{\\rm GRF}',
+    title: 'Unmodeled mass',
+    body: 'Deflections from the random mass field. They scale with source redshift, stay finite on critical curves, and feed directly into the reconstructed mass.',
+    tag: 'adds mass',
+  },
+  {
+    sym: '\\mathbf C_{\\rm GP}',
+    title: 'Image-plane shifts',
+    body: 'A Gaussian process for coherent offsets that are not cluster mass: line-of-sight structure, feature matching along arcs, residual astrometry.',
+    tag: 'no mass',
+  },
+];
+
+const pipeline = [
+  { step: 'Grind', title: 'Catalogs in', body: 'Image and member catalogs in YAML, with the model from Python or a Lenstool .par file.' },
+  { step: 'Tamp', title: 'Multi-start MAP', body: 'Gradient-based optimisation from many starts finds the posterior mode.' },
+  { step: 'Sort', title: 'Classify members', body: 'Nearby members keep exact deflections. Distant ones use a precomputed far-field expansion.' },
+  { step: 'Pull', title: 'NUTS sampling', body: 'Lens, members, hyperparameters and source positions are sampled jointly.' },
+  { step: 'Serve', title: 'Posterior out', body: 'posterior.h5, summary tables, convergence diagnostics, figures and lens maps.' },
+];
+
+const clusters = [
+  { name: 'Hera', kind: 'Simulated', z: '0.507', note: 'Drawn from a cosmological N-body simulation: irregular, bimodal, and not parametric by construction.' },
+  { name: 'Ares', kind: 'Simulated', z: '0.500', note: 'Built semi-analytically from parametrised components. The idealised counterpart to Hera.' },
+  { name: 'Abell S1063', kind: 'Observed', z: '0.348', note: 'A massive Hubble Frontier Fields cluster with deep HST and JWST imaging. It is the one in the cup at the top of this page.' },
+  { name: 'MACS J0416', kind: 'Observed', z: '0.397', note: 'An elongated, merging Frontier Fields cluster with one of the richest multiple-image catalogs known.' },
+];
+
+const team = [
+  { name: 'Isaque Dutra', aff: 'Department of Physics, Yale University', orcid: '0000-0001-7040-4930' },
+  { name: 'Priyamvada Natarajan', aff: 'Departments of Physics and Astronomy, Yale University', orcid: '0000-0002-5554-8896' },
+  { name: 'Colin J. Burke', aff: 'Department of Physics, University of North Texas', orcid: '0000-0001-9947-6911' },
+];
+
+const installCode = `git clone https://github.com/dutra/kappaccino.git
+cd kappaccino
+python -m pip install -e .`;
+
+const usageCode = `from kappaccino.cpu_runtime import configure_cpu_runtime
+
+configure_cpu_runtime(4, "parallel")          # before anything starts JAX
+
+from kappaccino.io.lenstool_par import config_from_lenstool_par
+from kappaccino.pipeline import dry_run, run
+
+config = config_from_lenstool_par(
+    "catalogs/hera/source/hera_lenscluster.par",
+    image_catalog="catalogs/hera/images.yaml",
+    member_catalog="catalogs/hera/members.yaml",
+    output_dir="results/demo",
+).validate()
+
+print(dry_run(config))                        # model size, member classification
+result = run(config)                          # multi-start MAP, then NUTS
+result.posterior.physical                     # (draw, parameter) in physical units`;
+
+const priorsCode = `import numpyro.distributions as dist
+from kappaccino.config import DPIEHaloConfig
+from kappaccino.priors import ellipticity_box, lognormal_from_moments
+
+halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5, priors={
+    "x_centre": dist.Uniform(-5.0, 5.0),
+    "y_centre": dist.Uniform(-5.0, 5.0),
+    **ellipticity_box(0.8),                    # e1, e2
+    "core_radius_kpc": dist.LogUniform(0.5, 100.0),
+    "v_disp": lognormal_from_moments(800.0, 280.0, low=100.0, high=2200.0),
+})`;
+---
+
+<Base
+  title="kappaccino · Bayesian cluster strong-lensing with JAX"
+  description="kappaccino builds Bayesian strong-lensing mass models of galaxy clusters with JAX and NumPyro, with a differentiable image-plane likelihood and correlated positional uncertainties."
+>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="kappaccino, back to top">
+        <Logo size={30} />
+        <span><i>κ</i>appaccino</span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#menu">Features</a>
+        <a href="#recipe">How it works</a>
+        <a href="#first-sip">Quickstart</a>
+        <a href="#tested">Clusters</a>
+        <a href="#team">Team</a>
+      </nav>
+      <div class="nav-cta">
+        <a href={DOCS}>Docs</a>
+        <a class="btn btn-ghost nav-gh" href={GITHUB}>GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ───────────── Hero ───────────── -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">κ + cappuccino</p>
+          <h1>Cluster lens models, <em>freshly brewed</em>.</h1>
+          <p class="hero-lede">
+            <strong>kappaccino</strong> is a Bayesian strong-lensing code for galaxy clusters, built on JAX. Its fully differentiable
+            likelihood lets gradient-based samplers infer hundreds of parameters at once, including the correlated uncertainty left
+            behind by mass the model never saw.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href={DOCS}>Read the docs <span aria-hidden="true">→</span></a>
+            <a class="btn btn-ghost" href={GITHUB}>View on GitHub</a>
+          </div>
+          <p class="pun">
+            <span class="pun-k" set:html={tex('\\kappa')} />
+            <span>
+              is the lensing <em>convergence</em>: projected mass in units of the critical density,{' '}
+              <span set:html={tex('\\kappa=\\Sigma/\\Sigma_{\\rm cr}')} />. The cappuccino is what you drink while the chains run.
+            </span>
+          </p>
+        </div>
+        <div class="hero-toy">
+          <LensToy />
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Features ───────────── -->
+    <section id="menu">
+      <div class="wrap">
+        <p class="eyebrow">The menu</p>
+        <h2 class="section-title">What is in the cup</h2>
+        <p class="section-lede">
+          Modern cluster catalogs hold hundreds of multiple images and hundreds of member galaxies. kappaccino is designed for
+          that scale, and for being honest about what a parametric model cannot capture.
+        </p>
+        <ul class="features">
+          {
+            features.map((f) => (
+              <li class="feature">
+                <span class="glyph" aria-hidden="true">
+                  {f.glyph}
+                </span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+        <ul class="extras" aria-label="Also included">
+          <li>dPIE and elliptical NFW profiles</li>
+          <li>Priors as <code>numpyro.distributions</code></li>
+          <li>Reads Lenstool <code>.par</code> files</li>
+          <li>Mock-validation harness</li>
+          <li>Convergence diagnostics</li>
+          <li>Bundled cluster catalogs</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ───────────── How it works ───────────── -->
+    <section id="recipe" class="recipe">
+      <div class="wrap">
+        <p class="eyebrow">The recipe</p>
+        <h2 class="section-title">How it works</h2>
+        <p class="section-lede">
+          Four ingredients for the lens, one trick for the likelihood, three kinds of uncertainty, and a two-stage pour.
+        </p>
+
+        <!-- 1 · lens model -->
+        <article class="step">
+          <div class="step-head">
+            <span class="step-num">01</span>
+            <div>
+              <h3>The lens has four ingredients</h3>
+              <p>
+                The lensing potential is a sum of parametric mass components and one non-parametric perturbation. Its gradient
+                is the deflection that bends every light ray.
+              </p>
+            </div>
+          </div>
+          <div class="eq" set:html={tex('\\psi(\\boldsymbol\\theta)=\\sum_{h}\\psi_h+\\sum_{s}\\psi_s+\\psi_{\\rm ext}+\\delta\\psi', true)} />
+          <ul class="ingredients">
+            {
+              ingredients.map((g) => (
+                <li>
+                  <span class="ing-coffee">{g.coffee}</span>
+                  <span class="ing-sym" set:html={tex(g.sym)} />
+                  <strong>{g.name}</strong>
+                  <p>{g.note}</p>
+                </li>
+              ))
+            }
+          </ul>
+        </article>
+
+        <!-- 2 · likelihood -->
+        <article class="step">
+          <div class="step-head">
+            <span class="step-num">02</span>
+            <div>
+              <h3>Back-project, don’t solve</h3>
+              <p>
+                Predicting image positions means finding every root of the lens equation, which is slow and not differentiable.
+                Going the other way takes a single deflection evaluation per image.
+              </p>
+            </div>
+          </div>
+          <div class="two-col">
+            <figure class="diagram">
+              <svg viewBox="0 0 560 260" role="img" aria-labelledby="bp-title bp-desc">
+                <title id="bp-title">Back-projection of multiple images</title>
+                <desc id="bp-desc">
+                  Three observed images in the image plane are each mapped back through the lens to the source plane, where they
+                  land close to a single shared source position. The small offsets are the residuals.
+                </desc>
+                <defs>
+                  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M0 0L10 5L0 10z" fill="#8fc7ff"></path>
+                  </marker>
+                </defs>
+                <!-- image plane -->
+                <rect x="10" y="30" width="250" height="215" rx="14" fill="rgba(243,236,226,0.03)" stroke="rgba(243,236,226,0.14)"></rect>
+                <text x="26" y="20" class="d-label">image plane</text>
+                <ellipse cx="135" cy="138" rx="86" ry="62" fill="none" stroke="#e0a868" stroke-width="1.6" transform="rotate(-18 135 138)"></ellipse>
+                <circle cx="128" cy="140" r="9" fill="#e0a868" opacity="0.35"></circle>
+                <circle cx="128" cy="140" r="3.500" fill="#f2c891"></circle>
+                <path d="M58 92q-14 30-2 62" fill="none" stroke="#8fc7ff" stroke-width="5" stroke-linecap="round"></path>
+                <circle cx="212" cy="196" r="5.500" fill="#8fc7ff"></circle>
+                <circle cx="150" cy="118" r="3.500" fill="#8fc7ff"></circle>
+                <text x="30" y="84" class="d-sym">θ₁</text>
+                <text x="222" y="216" class="d-sym">θ₂</text>
+                <text x="158" y="112" class="d-sym">θ₃</text>
+                <!-- arrows -->
+                <path d="M62 122C170 40 300 60 400 128" fill="none" stroke="#8fc7ff" stroke-width="1.300" stroke-dasharray="4 4" marker-end="url(#arr)" opacity="0.85"></path>
+                <path d="M218 195C290 210 350 190 410 146" fill="none" stroke="#8fc7ff" stroke-width="1.300" stroke-dasharray="4 4" marker-end="url(#arr)" opacity="0.85"></path>
+                <path d="M154 118C240 96 320 104 398 136" fill="none" stroke="#8fc7ff" stroke-width="1.300" stroke-dasharray="4 4" marker-end="url(#arr)" opacity="0.85"></path>
+                <!-- source plane -->
+                <rect x="330" y="60" width="220" height="160" rx="14" fill="rgba(243,236,226,0.03)" stroke="rgba(243,236,226,0.14)"></rect>
+                <text x="346" y="50" class="d-label">source plane</text>
+                <path d="M440 96q14 34 44 44q-30 10-44 44q-14-34-44-44q30-10 44-44z" fill="none" stroke="rgba(243,236,226,0.45)" stroke-width="1.200" stroke-dasharray="3 3"></path>
+                <circle cx="408" cy="131" r="3.500" fill="#8fc7ff"></circle>
+                <circle cx="418" cy="143" r="3.500" fill="#8fc7ff"></circle>
+                <circle cx="405" cy="142" r="3.500" fill="#8fc7ff"></circle>
+                <path d="M411 131v14M404 138h14" stroke="#f3ece2" stroke-width="1.600"></path>
+                <text x="424" y="128" class="d-sym">βₖ</text>
+                <text x="346" y="206" class="d-note">residuals Fᵢ</text>
+              </svg>
+            </figure>
+            <div class="prose">
+              <div class="eq eq-left" set:html={tex('\\boldsymbol\\beta_i=\\boldsymbol\\theta_i-\\boldsymbol\\alpha(\\boldsymbol\\theta_i),\\qquad \\boldsymbol F_i=\\boldsymbol\\beta_i-\\boldsymbol\\beta_k', true)} />
+              <p>
+                A good model sends all images of a family to the same source position{' '}
+                <span set:html={tex('\\boldsymbol\\beta_k')} />, which is sampled along with the lens. The residuals{' '}
+                <span set:html={tex('\\boldsymbol F_i')} />{' '}are scored in the image plane, where the data live.
+              </p>
+              <p>
+                The change of variables brings a factor <span set:html={tex('|\\det\\mathbf A_i|')} /> for each image. Leaving it out
+                rewards models that park critical curves on top of the images, so kappaccino keeps it.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3 · covariance -->
+        <article class="step">
+          <div class="step-head">
+            <span class="step-num">03</span>
+            <div>
+              <h3>Three kinds of “off by a bit”</h3>
+              <p>
+                A single hand-tuned positional uncertainty hides very different effects. kappaccino separates them and infers
+                each amplitude and correlation scale together with the lens.
+              </p>
+            </div>
+          </div>
+          <div class="eq" set:html={tex('\\mathbf C=\\mathbf C_{\\rm meas}+\\mathbf C_{\\rm GRF}+\\mathbf C_{\\rm GP}', true)} />
+          <ul class="errors">
+            {
+              errors.map((e) => (
+                <li>
+                  <div class="err-top">
+                    <span class="err-sym" set:html={tex(e.sym)} />
+                    <span class="tag">{e.tag}</span>
+                  </div>
+                  <h4>{e.title}</h4>
+                  <p>{e.body}</p>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="aside">
+            Try it in the toy above: turn up <em>Unmodeled mass</em> and watch nearby images shift together while the critical
+            curves wobble.
+          </p>
+        </article>
+
+        <!-- 4 · inference -->
+        <article class="step">
+          <div class="step-head">
+            <span class="step-num">04</span>
+            <div>
+              <h3>A two-stage pour</h3>
+              <p>
+                A sampler dropped at a random point of a several-hundred-dimensional posterior mostly gets lost. So the mode is
+                found first, and sampling starts from there.
+              </p>
+            </div>
+          </div>
+          <ol class="pipeline">
+            {
+              pipeline.map((p, i) => (
+                <li>
+                  <span class="pipe-step">{p.step}</span>
+                  <strong>{p.title}</strong>
+                  <p>{p.body}</p>
+                  {i < pipeline.length - 1 && <span class="pipe-arrow" aria-hidden="true">→</span>}
+                </li>
+              ))
+            }
+          </ol>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────────── Quickstart ───────────── -->
+    <section id="first-sip">
+      <div class="wrap">
+        <p class="eyebrow">First sip</p>
+        <h2 class="section-title">Quickstart</h2>
+        <p class="section-lede">
+          kappaccino needs Python 3.11 or newer. Catalogs for the supported clusters come with the repository, so a first fit
+          needs no extra downloads.
+        </p>
+        <div class="code-grid">
+          <div class="code-card">
+            <div class="code-head">
+              <span>Install</span>
+              <button type="button" class="copy" data-copy={installCode}>Copy</button>
+            </div>
+            <Code code={installCode} lang="bash" theme="vitesse-dark" />
+          </div>
+          <div class="code-card code-wide">
+            <div class="code-head">
+              <span>Fit a cluster</span>
+              <button type="button" class="copy" data-copy={usageCode}>Copy</button>
+            </div>
+            <Code code={usageCode} lang="python" theme="vitesse-dark" />
+          </div>
+          <div class="code-card code-wide">
+            <div class="code-head">
+              <span>Priors are plain NumPyro distributions</span>
+              <button type="button" class="copy" data-copy={priorsCode}>Copy</button>
+            </div>
+            <Code code={priorsCode} lang="python" theme="vitesse-dark" />
+          </div>
+        </div>
+        <p class="after-code">
+          Each run writes its search, chains, tables, figures and lens maps to one output folder. The
+          <a href={`${DOCS}en/latest/quickstart.html`}>quickstart guide</a> walks through a full fit, and the documentation defines
+          every <a href={`${DOCS}en/latest/outputs.html`}>output file</a> and
+          <a href={`${DOCS}en/latest/posterior.html`}>posterior parameter</a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ───────────── Clusters ───────────── -->
+    <section id="tested">
+      <div class="wrap">
+        <p class="eyebrow">Taste-tested</p>
+        <h2 class="section-title">Clusters on the bar</h2>
+        <p class="section-lede">
+          The code is exercised on analytic mocks, on two simulated clusters whose true mass is known, and on two of the
+          best-studied lenses in the sky. Catalogs for all four ship with the repository.
+        </p>
+        <ul class="clusters">
+          {
+            clusters.map((c) => (
+              <li>
+                <div class="cl-top">
+                  <span class:list={['tag', c.kind === 'Simulated' ? 'tag-sim' : 'tag-obs']}>{c.kind}</span>
+                  <span class="cl-z">
+                    <i>z</i> = {c.z}
+                  </span>
+                </div>
+                <h3>{c.name}</h3>
+                <p>{c.note}</p>
+              </li>
+            ))
+          }
+        </ul>
+        <p class="after-code">
+          Results will accompany the paper. If you use the bundled catalogs, please cite the works they come from, listed in
+          <a href={`${GITHUB}/blob/main/catalogs/README.md`}><code>catalogs/README.md</code></a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ───────────── Team ───────────── -->
+    <section id="team">
+      <div class="wrap team-grid">
+        <div>
+          <p class="eyebrow">The baristas</p>
+          <h2 class="section-title">Team</h2>
+          <ul class="team">
+            {
+              team.map((t) => (
+                <li>
+                  <strong>{t.name}</strong>
+                  <span>{t.aff}</span>
+                  <a href={`https://orcid.org/${t.orcid}`}>ORCID {t.orcid}</a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+        <div class="cite">
+          <h3>Citing kappaccino</h3>
+          <p>
+            The paper describing the method is in preparation. Until it is out, please cite the repository and get in touch
+            through GitHub if you are using the code in your work.
+          </p>
+          <h3>Standing on shoulders</h3>
+          <p>
+            kappaccino is built with <a href="https://github.com/jax-ml/jax">JAX</a>,{' '}
+            <a href="https://num.pyro.ai/">NumPyro</a>, <a href="https://github.com/lenstronomy/JAXtronomy">JAXtronomy</a> and{' '}
+            <a href="https://github.com/lenstronomy/lenstronomy">lenstronomy</a>, and owes its catalog-driven design to Lenstool.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href={DOCS}>Read the docs <span aria-hidden="true">→</span></a>
+            <a class="btn btn-ghost" href={`${GITHUB}/issues`}>Open an issue</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span class="brand"><Logo size={22} /><span><i>κ</i>appaccino</span></span>
+      <span class="foot-note">Brewed with JAX. Best served with many multiple images.</span>
+      <span class="foot-links"><a href={GITHUB}>GitHub</a><a href={DOCS}>Docs</a></span>
+    </div>
+  </footer>
+</Base>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('button[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+        btn.textContent = 'Copied';
+      } catch {
+        btn.textContent = 'Press ⌘C';
+      }
+      setTimeout(() => (btn.textContent = 'Copy'), 1600);
+    });
+  });
+</script>
+
+<style>
+  /* ── nav ── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(11, 10, 16, 0.72);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    height: 64px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--font-display);
+    font-variation-settings: 'SOFT' 100, 'WONK' 1;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+  .brand i {
+    color: var(--crema);
+    font-size: 1.12em;
+    margin-right: 0.5px;
+  }
+  .nav nav {
+    display: flex;
+    gap: 24px;
+    margin-left: auto;
+  }
+  .nav nav a,
+  .nav-cta > a:not(.btn) {
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 14.5px;
+  }
+  .nav nav a:hover,
+  .nav-cta > a:not(.btn):hover {
+    color: var(--crema-bright);
+  }
+  .nav-cta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .nav-gh {
+    padding: 7px 15px;
+    font-size: 14px;
+  }
+  @media (max-width: 860px) {
+    .nav nav {
+      display: none;
+    }
+    .nav-cta {
+      margin-left: auto;
+    }
+  }
+
+  /* ── hero ── */
+  .hero {
+    padding-block: clamp(48px, 7vw, 96px) clamp(64px, 8vw, 110px);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: -64px 0 0 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 55% at 78% 40%, rgba(122, 74, 43, 0.32), transparent 70%),
+      radial-gradient(45% 45% at 15% 10%, rgba(92, 143, 196, 0.16), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: clamp(32px, 6vw, 80px);
+    align-items: center;
+  }
+  h1 {
+    font-size: clamp(2.6rem, 6.2vw, 4.6rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--crema);
+    font-variation-settings: 'SOFT' 100, 'WONK' 1;
+  }
+  .hero-lede {
+    margin-top: 24px;
+    font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+    color: var(--ink-soft);
+    max-width: 54ch;
+  }
+  .hero-lede strong {
+    color: var(--ink);
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+  }
+  .pun {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-top: 40px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    font-size: 14.5px;
+    color: var(--muted);
+    max-width: 54ch;
+  }
+  .pun em {
+    color: var(--ink-soft);
+  }
+  .pun-k {
+    font-size: 2.3rem;
+    line-height: 1;
+    color: var(--crema);
+  }
+  @media (max-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── features ── */
+  .features {
+    list-style: none;
+    padding: 0;
+    margin: 48px 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 16px;
+  }
+  .feature {
+    padding: 26px 26px 28px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(23, 19, 29, 0.9), rgba(17, 14, 22, 0.9));
+    transition:
+      border-color 0.2s ease,
+      transform 0.2s ease;
+  }
+  .feature:hover {
+    border-color: color-mix(in srgb, var(--crema) 50%, transparent);
+    transform: translateY(-2px);
+  }
+  .glyph {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    height: 44px;
+    padding-inline: 10px;
+    border-radius: 12px;
+    background: var(--espresso);
+    border: 1px solid color-mix(in srgb, var(--crema) 35%, transparent);
+    color: var(--crema-bright);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.25rem;
+    margin-bottom: 18px;
+  }
+  .feature h3 {
+    font-size: 1.28rem;
+    margin-bottom: 10px;
+  }
+  .feature p {
+    color: var(--ink-soft);
+    font-size: 0.97rem;
+  }
+  .extras {
+    list-style: none;
+    padding: 0;
+    margin: 28px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .extras li {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 999px;
+  }
+
+  /* ── recipe ── */
+  .recipe {
+    background: linear-gradient(180deg, transparent, rgba(42, 26, 18, 0.35) 18%, rgba(42, 26, 18, 0.35) 82%, transparent);
+  }
+  .step {
+    margin-top: 56px;
+    padding: clamp(22px, 3.5vw, 40px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(13, 11, 18, 0.72);
+  }
+  .step-head {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .step-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--crema);
+    padding: 5px 10px;
+    border: 1px solid color-mix(in srgb, var(--crema) 40%, transparent);
+    border-radius: 999px;
+    margin-top: 4px;
+  }
+  .step-head h3 {
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+  }
+  .step-head p {
+    margin-top: 10px;
+    color: var(--ink-soft);
+    max-width: 66ch;
+  }
+  .eq {
+    margin: 30px 0 6px;
+    padding: 18px 14px;
+    border-radius: 12px;
+    background: rgba(243, 236, 226, 0.035);
+    overflow-x: auto;
+    overflow-y: hidden;
+    font-size: clamp(0.85rem, 1.6vw, 1.1rem);
+  }
+  .eq-left {
+    margin-top: 0;
+  }
+  .eq :global(.katex-display) {
+    margin: 0;
+  }
+  .ingredients {
+    list-style: none;
+    padding: 0;
+    margin: 22px 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+  }
+  .ingredients li {
+    display: grid;
+    gap: 4px;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+  .ing-coffee {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--crema);
+  }
+  .ing-sym {
+    font-size: 1.3rem;
+    color: var(--arc);
+  }
+  .ingredients p,
+  .errors p,
+  .pipeline p {
+    font-size: 0.93rem;
+    color: var(--ink-soft);
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 44px);
+    align-items: center;
+    margin-top: 30px;
+  }
+  .diagram {
+    margin: 0;
+  }
+  .diagram svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .diagram :global(.d-label) {
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--muted);
+  }
+  .diagram :global(.d-sym) {
+    font: italic 15px var(--font-display);
+    fill: var(--ink);
+  }
+  .diagram :global(.d-note) {
+    font: 12px var(--font-body);
+    fill: var(--muted);
+  }
+  .prose {
+    display: grid;
+    gap: 16px;
+    color: var(--ink-soft);
+  }
+  .errors {
+    list-style: none;
+    padding: 0;
+    margin: 22px 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .errors li {
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+  .err-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .err-sym {
+    font-size: 1.2rem;
+    color: var(--arc);
+  }
+  .errors h4 {
+    margin: 0 0 6px;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 560;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-soft);
+  }
+  .tag-sim {
+    border-color: color-mix(in srgb, var(--arc) 55%, transparent);
+    color: var(--arc);
+  }
+  .tag-obs {
+    border-color: color-mix(in srgb, var(--crema) 55%, transparent);
+    color: var(--crema-bright);
+  }
+  .aside {
+    margin-top: 20px;
+    font-size: 0.95rem;
+    color: var(--muted);
+  }
+  .aside em {
+    color: var(--crema-bright);
+    font-style: normal;
+  }
+  .pipeline {
+    list-style: none;
+    padding: 0;
+    margin: 30px 0 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .pipeline li {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 5px;
+    padding: 18px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(243, 236, 226, 0.025);
+  }
+  .pipe-step {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--crema);
+  }
+  .pipe-arrow {
+    position: absolute;
+    right: -13px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    color: var(--crema);
+    font-size: 14px;
+    background: #0e0c13;
+    line-height: 1;
+  }
+  @media (max-width: 980px) {
+    .pipeline {
+      grid-template-columns: 1fr;
+    }
+    .pipe-arrow {
+      right: auto;
+      left: 22px;
+      top: auto;
+      bottom: -13px;
+      transform: rotate(90deg);
+    }
+    .two-col {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .step-head {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+
+  /* ── quickstart ── */
+  .code-grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 44px;
+  }
+  .code-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #0e0c13;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .code-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .copy {
+    font: inherit;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 2px 11px;
+    cursor: pointer;
+  }
+  .copy:hover {
+    border-color: var(--crema);
+    color: var(--ink);
+  }
+  .code-card :global(pre) {
+    margin: 0;
+    padding: 18px 20px;
+    background: transparent !important;
+    font-size: 13.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .after-code {
+    margin-top: 26px;
+    color: var(--ink-soft);
+    max-width: 72ch;
+  }
+
+  /* ── clusters ── */
+  .clusters {
+    list-style: none;
+    padding: 0;
+    margin: 44px 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .clusters li {
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(23, 19, 29, 0.9), rgba(17, 14, 22, 0.9));
+  }
+  .cl-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .cl-z {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .clusters h3 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  .clusters p {
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  /* ── team ── */
+  .team-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(32px, 6vw, 80px);
+  }
+  .team {
+    list-style: none;
+    padding: 0;
+    margin: 34px 0 0;
+    display: grid;
+    gap: 22px;
+  }
+  .team li {
+    display: grid;
+    gap: 2px;
+    padding-left: 18px;
+    border-left: 2px solid var(--roast);
+  }
+  .team strong {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 560;
+  }
+  .team span {
+    color: var(--ink-soft);
+    font-size: 0.97rem;
+  }
+  .team a {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .team a:hover {
+    color: var(--crema-bright);
+  }
+  .cite {
+    padding: clamp(22px, 3.5vw, 36px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(42, 26, 18, 0.4);
+    align-self: start;
+  }
+  .cite h3 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+  .cite h3:not(:first-child) {
+    margin-top: 26px;
+  }
+  .cite p {
+    color: var(--ink-soft);
+    font-size: 0.98rem;
+  }
+  @media (max-width: 820px) {
+    .team-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── footer ── */
+  footer {
+    border-top: 1px solid var(--line);
+    padding-block: 28px;
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 28px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .foot .brand {
+    font-size: 1.05rem;
+  }
+  .foot-links {
+    display: flex;
+    gap: 18px;
+  }
+  .foot-links a {
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .foot-links a:hover {
+    color: var(--crema-bright);
+  }
+</style>

@@ -1,0 +1,32 @@
+---
+interface Props {
+  size?: number;
+}
+const { size = 30 } = Astro.props;
+---
+
+<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+  <path
+    d="M20 10c-3.4 4.4 3.4 6.6 0 11M32 7c-3.4 4.4 3.4 6.6 0 11M44 10c-3.4 4.4 3.4 6.6 0 11"
+    fill="none"
+    stroke="var(--arc)"
+    stroke-width="2.6"
+    stroke-linecap="round"></path>
+  <path d="M10 27h40v9a20 20 0 0 1-40 0z" fill="var(--crema)"></path>
+  <path
+    d="M50 30.500h3.500a6.500 6.500 0 0 1 0 13h-5.500"
+    fill="none"
+    stroke="var(--crema)"
+    stroke-width="3.400"
+    stroke-linecap="round"></path>
+  <text
+    x="30"
+    y="48"
+    text-anchor="middle"
+    font-family="Georgia, serif"
+    font-style="italic"
+    font-size="21"
+    font-weight="700"
+    fill="#1c120b">κ</text
+  >
+</svg>

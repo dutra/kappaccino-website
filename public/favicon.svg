@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0d0b12"/>
+  <path d="M20 12c-3 4 3 6 0 10M32 9c-3 4 3 6 0 10M44 12c-3 4 3 6 0 10" fill="none" stroke="#8fc7ff" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M12 28h36v8a18 18 0 0 1-36 0z" fill="#e0a868"/>
+  <path d="M48 31h3a6 6 0 0 1 0 12h-5" fill="none" stroke="#e0a868" stroke-width="3.2" stroke-linecap="round"/>
+  <text x="30" y="47" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="19" font-weight="700" fill="#0d0b12">κ</text>
+</svg>

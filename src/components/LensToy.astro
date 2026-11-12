@@ -1,0 +1,598 @@
+---
+// A toy cluster lens rendered by inverse ray shooting: every pixel of the
+// image plane is mapped back to the source plane once, then each frame only
+// evaluates the source brightness there. No lens-equation solving, which is
+// the same trick the real code's likelihood is built on.
+//
+// The backdrop is Webb's image of Abell S1063 (ESA/Webb potm2505a, CC BY 4.0),
+// cropped square and centred on the brightest cluster galaxy. The lens drawn
+// over it is a hand-placed toy, roughly aligned with the cluster.
+import cupImage from '../assets/abell-s1063-webb.jpg';
+---
+
+<div class="toy" data-lens-toy data-bg={cupImage.src}>
+  <div class="cup">
+    <canvas
+      tabindex="0"
+      aria-label="Interactive gravitational lens drawn over the Webb image of the galaxy cluster Abell S1063. Move the pointer or use the arrow keys to move a background galaxy behind the cluster and watch its lensed images change."
+    ></canvas>
+    <span class="handle" aria-hidden="true"></span>
+  </div>
+
+  <div class="panel">
+    <p class="hint">
+      <span><span class="hint-move">Move your pointer</span> to slide a background galaxy behind the cluster.</span>
+      <span class="mu">Total magnification <strong data-mu>–</strong></span>
+    </p>
+    <div class="controls">
+      <label class="check">
+        <input type="checkbox" data-crit checked />
+        <span class="swatch swatch-crit"></span>Critical curves
+      </label>
+      <label class="check">
+        <input type="checkbox" data-caus checked />
+        <span class="swatch swatch-caus"></span>Caustics
+      </label>
+      <label class="slider">
+        <span>Unmodeled mass</span>
+        <input type="range" min="0" max="0.04" step="0.001" value="0" data-grf aria-label="Amplitude of the unmodeled mass field" />
+      </label>
+      <button type="button" data-reroll title="Draw a new random mass field">Re-roll field</button>
+    </div>
+    <p class="credit">
+      In the cup: galaxy cluster Abell S1063 seen by Webb.{' '}
+      <a href="https://esawebb.org/images/potm2505a/">Image</a>: ESA/Webb, NASA &amp; CSA, H. Atek, M. Zamani (ESA/Webb);
+      acknowledgement R. Endsley. The galaxy under the crosshair, its lensed images and the curves are a toy lens drawn on top, not a kappaccino model.
+    </p>
+  </div>
+</div>
+
+<style>
+  .toy {
+    display: grid;
+    gap: 18px;
+    justify-items: center;
+  }
+  .cup {
+    position: relative;
+    width: min(100%, 500px);
+    aspect-ratio: 1;
+  }
+  canvas {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #060509;
+    cursor: crosshair;
+    touch-action: none;
+    box-shadow:
+      0 0 0 2px #1c120b,
+      0 0 0 9px var(--crema),
+      0 0 0 11px #1c120b,
+      0 0 0 12px rgba(224, 168, 104, 0.35),
+      0 30px 80px -20px rgba(224, 168, 104, 0.28),
+      0 0 120px -30px rgba(143, 199, 255, 0.35);
+  }
+  canvas:focus-visible {
+    outline: 2px solid var(--arc);
+    outline-offset: 16px;
+  }
+  /* The cup's handle, seen from above. */
+  .handle {
+    position: absolute;
+    top: 50%;
+    right: -9%;
+    width: 17%;
+    height: 24%;
+    transform: translateY(-50%);
+    border: 9px solid var(--crema);
+    border-left: none;
+    border-radius: 0 999px 999px 0;
+    box-shadow: 0 0 0 2px #1c120b;
+  }
+  .panel {
+    width: min(100%, 500px);
+    display: grid;
+    gap: 12px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .hint {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 16px;
+  }
+  .hint-move {
+    color: var(--ink-soft);
+  }
+  .mu strong {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--arc);
+    display: inline-block;
+    min-width: 5ch;
+  }
+  .credit {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .credit a {
+    color: var(--ink-soft);
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(20, 17, 26, 0.7);
+    backdrop-filter: blur(6px);
+  }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .check input {
+    accent-color: var(--crema);
+    margin: 0;
+  }
+  .swatch {
+    width: 16px;
+    height: 0;
+    border-top: 2px solid;
+  }
+  .swatch-crit {
+    border-color: var(--crema);
+  }
+  .swatch-caus {
+    border-color: #f3ece2;
+    border-top-style: dashed;
+    opacity: 0.75;
+  }
+  .slider {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-soft);
+    flex: 1 1 200px;
+  }
+  .slider input {
+    flex: 1;
+    min-width: 80px;
+    accent-color: var(--crema);
+  }
+  button {
+    font: inherit;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  button:hover {
+    border-color: var(--crema);
+    color: var(--ink);
+  }
+  @media (max-width: 560px) {
+    .handle {
+      display: none;
+    }
+    .cup {
+      width: min(100% - 20px, 420px);
+    }
+  }
+</style>
+
+<script>
+  type Comp = { x: number; y: number; b: number; s: number; e: number; phi: number };
+
+  const N = 300; // grid cells per side
+  const L = 1.95; // half-width of the field, arbitrary angular units
+  const H = (2 * L) / (N - 1);
+  const SRC_SIGMA = 0.05;
+  const KNOT_SIGMA = 0.022;
+  const KNOT_DX = 0.055;
+  const KNOT_DY = -0.03;
+
+  // One cluster-scale halo on the brightest cluster galaxy, elongated along
+  // the cluster's north-east to south-west axis, plus a few bright members.
+  // Softened pseudo-elliptical isothermal potentials; positions are by eye.
+  const COMPS: Comp[] = [
+    { x: 0, y: 0, b: 0.92, s: 0.16, e: 0.3, phi: -0.33 },
+    { x: -0.9, y: 0.62, b: 0.05, s: 0.016, e: 0, phi: 0 },
+    { x: 0.8, y: -0.13, b: 0.05, s: 0.016, e: 0, phi: 0 },
+    { x: 0.44, y: -0.53, b: 0.04, s: 0.016, e: 0, phi: 0 },
+    { x: 1.12, y: 0.68, b: 0.04, s: 0.016, e: 0, phi: 0 },
+    { x: -1.28, y: -0.42, b: 0.04, s: 0.016, e: 0, phi: 0 },
+  ];
+
+  function mulberry32(a: number) {
+    return () => {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector('canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const muEl = root.querySelector<HTMLElement>('[data-mu]')!;
+    const critBox = root.querySelector<HTMLInputElement>('[data-crit]')!;
+    const causBox = root.querySelector<HTMLInputElement>('[data-caus]')!;
+    const grfSlider = root.querySelector<HTMLInputElement>('[data-grf]')!;
+    const reroll = root.querySelector<HTMLButtonElement>('[data-reroll]')!;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const P = N * N;
+    const a0x = new Float32Array(P); // parametric deflection
+    const a0y = new Float32Array(P);
+    const gx = new Float32Array(P); // unit-rms random-field deflection
+    const gy = new Float32Array(P);
+    const bx = new Float32Array(P); // back-projected source-plane position
+    const by = new Float32Array(P);
+    const det = new Float32Array(P);
+
+    const bg = new Image();
+    let bgReady = false;
+    bg.decoding = 'async';
+    bg.onload = () => {
+      bgReady = true;
+      dirty = true;
+      if (reduceMotion) draw();
+      else schedule();
+    };
+
+    const buf = document.createElement('canvas');
+    buf.width = buf.height = N;
+    const bctx = buf.getContext('2d')!;
+    const img = bctx.createImageData(N, N);
+
+    // --- static fields -----------------------------------------------------
+    for (let j = 0; j < N; j++) {
+      const y = -L + j * H;
+      for (let i = 0; i < N; i++) {
+        const x = -L + i * H;
+        const p = j * N + i;
+        let ax = 0;
+        let ay = 0;
+        for (const c of COMPS) {
+          const dx = x - c.x;
+          const dy = y - c.y;
+          const cs = Math.cos(c.phi);
+          const sn = Math.sin(c.phi);
+          const xr = cs * dx + sn * dy;
+          const yr = -sn * dx + cs * dy;
+          const q1 = 1 - c.e;
+          const q2 = 1 + c.e;
+          const r = Math.sqrt(c.s * c.s + q1 * xr * xr + q2 * yr * yr);
+          const axr = (c.b * q1 * xr) / r;
+          const ayr = (c.b * q2 * yr) / r;
+          ax += cs * axr - sn * ayr;
+          ay += sn * axr + cs * ayr;
+        }
+        a0x[p] = ax;
+        a0y[p] = ay;
+      }
+    }
+
+    // --- Gaussian random field with a knee power spectrum -------------------
+    let fieldSeed = 7;
+    function buildField() {
+      const rnd = mulberry32(fieldSeed);
+      const M = 44;
+      const kMin = (2 * Math.PI) / 2.6;
+      const kMax = (2 * Math.PI) / 0.55;
+      const kb = (2 * Math.PI) / 1.3;
+      const modes: number[][] = [];
+      for (let m = 0; m < M; m++) {
+        const k = kMin * Math.pow(kMax / kMin, rnd());
+        const th = rnd() * 2 * Math.PI;
+        const amp = Math.sqrt(1 / (1 + Math.pow(k / kb, 4)));
+        modes.push([k * Math.cos(th), k * Math.sin(th), rnd() * 2 * Math.PI, amp * Math.cos(th), amp * Math.sin(th)]);
+      }
+      let sum2 = 0;
+      for (let j = 0; j < N; j++) {
+        const y = -L + j * H;
+        for (let i = 0; i < N; i++) {
+          const x = -L + i * H;
+          let vx = 0;
+          let vy = 0;
+          for (let m = 0; m < M; m++) {
+            const md = modes[m];
+            const sv = Math.sin(md[0] * x + md[1] * y + md[2]);
+            vx += md[3] * sv;
+            vy += md[4] * sv;
+          }
+          const p = j * N + i;
+          gx[p] = vx;
+          gy[p] = vy;
+          sum2 += vx * vx + vy * vy;
+        }
+      }
+      const norm = 1 / Math.sqrt(sum2 / (2 * P));
+      for (let p = 0; p < P; p++) {
+        gx[p] *= norm;
+        gy[p] *= norm;
+      }
+    }
+
+    // --- lens mapping, critical curves, caustics ----------------------------
+    let critPath = new Path2D();
+    let causPath = new Path2D();
+    let critSegs: number[] = [];
+    let causSegs: number[] = [];
+
+    function rebuildMapping() {
+      const sig = parseFloat(grfSlider.value);
+      for (let j = 0; j < N; j++) {
+        const y = -L + j * H;
+        for (let i = 0; i < N; i++) {
+          const p = j * N + i;
+          bx[p] = -L + i * H - a0x[p] - sig * gx[p];
+          by[p] = y - a0y[p] - sig * gy[p];
+        }
+      }
+      for (let j = 0; j < N; j++) {
+        const jm = Math.max(j - 1, 0);
+        const jp = Math.min(j + 1, N - 1);
+        for (let i = 0; i < N; i++) {
+          const im = Math.max(i - 1, 0);
+          const ip = Math.min(i + 1, N - 1);
+          const ex = 1 / ((ip - im) * H);
+          const ey = 1 / ((jp - jm) * H);
+          const axx = (bx[j * N + ip] - bx[j * N + im]) * ex;
+          const ayx = (by[j * N + ip] - by[j * N + im]) * ex;
+          const axy = (bx[jp * N + i] - bx[jm * N + i]) * ey;
+          const ayy = (by[jp * N + i] - by[jm * N + i]) * ey;
+          det[j * N + i] = axx * ayy - axy * ayx;
+        }
+      }
+      // Marching squares on det A = 0. Each crossing is recorded both in the
+      // image plane (critical curve) and mapped to the source plane (caustic).
+      critSegs = [];
+      causSegs = [];
+      const pts: number[] = [];
+      const edge = (i0: number, j0: number, i1: number, j1: number) => {
+        const p0 = j0 * N + i0;
+        const p1 = j1 * N + i1;
+        const d0 = det[p0];
+        const d1 = det[p1];
+        if (d0 < 0 === d1 < 0) return;
+        const t = d0 / (d0 - d1);
+        pts.push(
+          -L + (i0 + t * (i1 - i0)) * H,
+          -L + (j0 + t * (j1 - j0)) * H,
+          bx[p0] + t * (bx[p1] - bx[p0]),
+          by[p0] + t * (by[p1] - by[p0]),
+        );
+      };
+      for (let j = 0; j < N - 1; j++) {
+        for (let i = 0; i < N - 1; i++) {
+          pts.length = 0;
+          edge(i, j, i + 1, j);
+          edge(i + 1, j, i + 1, j + 1);
+          edge(i + 1, j + 1, i, j + 1);
+          edge(i, j + 1, i, j);
+          for (let k = 0; k + 7 < pts.length; k += 8) {
+            critSegs.push(pts[k], pts[k + 1], pts[k + 4], pts[k + 5]);
+            causSegs.push(pts[k + 2], pts[k + 3], pts[k + 6], pts[k + 7]);
+          }
+        }
+      }
+      buildPaths();
+    }
+
+    function buildPaths() {
+      const W = canvas.width;
+      const toPx = (v: number) => ((v + L) / (2 * L)) * W;
+      const make = (segs: number[]) => {
+        const path = new Path2D();
+        for (let k = 0; k < segs.length; k += 4) {
+          path.moveTo(toPx(segs[k]), toPx(segs[k + 1]));
+          path.lineTo(toPx(segs[k + 2]), toPx(segs[k + 3]));
+        }
+        return path;
+      };
+      critPath = make(critSegs);
+      causPath = make(causSegs);
+    }
+
+    // --- rendering -----------------------------------------------------------
+    let sx = 0.16;
+    let sy = -0.06;
+    const inv2s = 1 / (2 * SRC_SIGMA * SRC_SIGMA);
+    const inv2k = 1 / (2 * KNOT_SIGMA * KNOT_SIGMA);
+    const cut = 12 * SRC_SIGMA * SRC_SIGMA;
+
+    function draw() {
+      const data = img.data;
+      let flux = 0;
+      for (let p = 0; p < P; p++) {
+        const dx = bx[p] - sx;
+        const dy = by[p] - sy;
+        const d2 = dx * dx + dy * dy;
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        if (d2 < cut) {
+          const s = Math.exp(-d2 * inv2s);
+          flux += s;
+          const kx = dx - KNOT_DX;
+          const ky = dy - KNOT_DY;
+          const kn = Math.exp(-(kx * kx + ky * ky) * inv2k);
+          // Dusty red-orange disc with a pale star-forming knot, like the
+          // lensed arcs in the Webb image.
+          r = 255 * s + 255 * kn;
+          g = 122 * s + 214 * kn;
+          b = 58 * s + 170 * kn;
+        }
+        const o = 4 * p;
+        data[o] = r > 255 ? 255 : r;
+        data[o + 1] = g > 255 ? 255 : g;
+        data[o + 2] = b > 255 ? 255 : b;
+        data[o + 3] = 255;
+      }
+      bctx.putImageData(img, 0, 0);
+
+      const W = canvas.width;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#060509';
+      ctx.fillRect(0, 0, W, W);
+      if (bgReady) {
+        ctx.globalAlpha = 0.82; // dim the sky a little so the overlay reads
+        ctx.drawImage(bg, 0, 0, W, W);
+        ctx.globalAlpha = 1;
+      }
+      // The lensed galaxy is light added on top of the real sky.
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(buf, 0, 0, W, W);
+      ctx.globalCompositeOperation = 'source-over';
+
+      const u = W / 500; // line-width unit
+      if (causBox.checked) {
+        ctx.setLineDash([4 * u, 4 * u]);
+        ctx.lineWidth = 1.1 * u;
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.stroke(causPath);
+        ctx.setLineDash([]);
+      }
+      if (critBox.checked) {
+        ctx.lineWidth = 1.5 * u;
+        ctx.strokeStyle = 'rgba(242,200,145,0.95)';
+        ctx.stroke(critPath);
+      }
+      // Where the galaxy would be seen without the lens.
+      const px = ((sx + L) / (2 * L)) * W;
+      const py = ((sy + L) / (2 * L)) * W;
+      ctx.lineWidth = 1.3 * u;
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.beginPath();
+      ctx.arc(px, py, 7 * u, 0, 2 * Math.PI);
+      ctx.moveTo(px - 11 * u, py);
+      ctx.lineTo(px - 4 * u, py);
+      ctx.moveTo(px + 4 * u, py);
+      ctx.lineTo(px + 11 * u, py);
+      ctx.moveTo(px, py - 11 * u);
+      ctx.lineTo(px, py - 4 * u);
+      ctx.moveTo(px, py + 4 * u);
+      ctx.lineTo(px, py + 11 * u);
+      ctx.stroke();
+
+      const mu = (flux * H * H) / (2 * Math.PI * SRC_SIGMA * SRC_SIGMA);
+      muEl.textContent = `≈ ${mu < 10 ? mu.toFixed(1) : mu.toFixed(0)}×`;
+    }
+
+    // --- animation and input --------------------------------------------------
+    let dirty = true;
+    let visible = true;
+    let lastInput = -1e9;
+    let raf = 0;
+    const t0 = performance.now();
+
+    function frame(now: number) {
+      raf = 0;
+      const idle = now - lastInput > 3500;
+      if (idle && !reduceMotion) {
+        const t = (now - t0) / 1000;
+        sx = 0.5 * Math.cos(0.21 * t + 0.4);
+        sy = 0.32 * Math.sin(0.29 * t + 1.1);
+        dirty = true;
+      }
+      if (dirty) {
+        draw();
+        dirty = false;
+      }
+      if (visible && !reduceMotion) schedule();
+    }
+    function schedule() {
+      if (!raf) raf = requestAnimationFrame(frame);
+    }
+    function touch() {
+      lastInput = performance.now();
+      dirty = true;
+      schedule();
+    }
+
+    function pointer(ev: PointerEvent) {
+      const rect = canvas.getBoundingClientRect();
+      sx = ((ev.clientX - rect.left) / rect.width) * 2 * L - L;
+      sy = ((ev.clientY - rect.top) / rect.height) * 2 * L - L;
+      touch();
+    }
+    canvas.addEventListener('pointermove', pointer);
+    canvas.addEventListener('pointerdown', (ev) => {
+      canvas.setPointerCapture(ev.pointerId);
+      pointer(ev);
+    });
+    canvas.addEventListener('keydown', (ev) => {
+      const step = ev.shiftKey ? 0.1 : 0.03;
+      if (ev.key === 'ArrowLeft') sx -= step;
+      else if (ev.key === 'ArrowRight') sx += step;
+      else if (ev.key === 'ArrowUp') sy -= step;
+      else if (ev.key === 'ArrowDown') sy += step;
+      else return;
+      ev.preventDefault();
+      sx = Math.max(-L, Math.min(L, sx));
+      sy = Math.max(-L, Math.min(L, sy));
+      touch();
+    });
+    for (const el of [critBox, causBox]) {
+      el.addEventListener('change', () => {
+        dirty = true;
+        schedule();
+      });
+    }
+    grfSlider.addEventListener('input', () => {
+      rebuildMapping();
+      dirty = true;
+      schedule();
+    });
+    reroll.addEventListener('click', () => {
+      fieldSeed += 1;
+      buildField();
+      if (parseFloat(grfSlider.value) === 0) grfSlider.value = '0.02';
+      rebuildMapping();
+      dirty = true;
+      schedule();
+    });
+
+    new ResizeObserver(() => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const size = Math.max(200, Math.round(canvas.clientWidth * dpr));
+      if (canvas.width !== size) {
+        canvas.width = canvas.height = size;
+        buildPaths();
+        dirty = true;
+        schedule();
+      }
+    }).observe(canvas);
+
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      if (visible) schedule();
+    }).observe(canvas);
+
+    buildField();
+    rebuildMapping();
+    schedule();
+    if (root.dataset.bg) bg.src = root.dataset.bg;
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-lens-toy]').forEach(init);
+</script>
