@@ -6,6 +6,7 @@ import Logo from '../components/Logo.astro';
 import LensToy from '../components/LensToy.astro';
 import GrfDemo from '../components/GrfDemo.astro';
 import GpDemo from '../components/GpDemo.astro';
+import ScalingDemo from '../components/ScalingDemo.astro';
 
 const GITHUB = 'https://github.com/dutra/kappaccino';
 const DOCS = 'https://kappaccino.readthedocs.io/';
@@ -379,6 +380,57 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
             }
           </ol>
         </article>
+      </div>
+    </section>
+
+    <!-- ───────────── Member scaling ───────────── -->
+    <section id="members" class="foam">
+      <div class="wrap">
+        <p class="eyebrow">Steamed milk</p>
+        <h2 class="section-title">Free to stray, still counted</h2>
+        <p class="section-lede">
+          Hundreds of member galaxies are too many to fit one by one, so their halos follow scaling relations with
+          luminosity. In kappaccino every member may deviate from those relations, and every member still helps to set them.
+        </p>
+
+        <ScalingDemo />
+
+        <div class="foam-notes">
+          <div>
+            <div class="eq eq-left" set:html={tex('\\begin{aligned}\\sigma_{0,g}&=\\sigma_\\star\\left(\\frac{L_g}{L_\\star}\\right)^{\\alpha_\\sigma}\\exp(s_\\sigma z_{\\sigma,g})\\\\[4pt] r_{{\\rm cut},g}&=r_{{\\rm cut},\\star}\\left(\\frac{L_g}{L_\\star}\\right)^{\\beta_r}\\exp(s_r z_{r,g})\\end{aligned}', true)} />
+            <p>
+              Each dot is a made-up member galaxy and the line is the relation for the velocity dispersion. Leave it alone and
+              the intrinsic scatter{' '}<span set:html={tex('s_\\sigma')} />{' '}sweeps on its own, while every member's
+              own{' '}<span set:html={tex('z_{\\sigma,g}')} />{' '}wanders at random. Switch to <em>A few set free</em> to see the conventional setup.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <strong>Shared by all:</strong> the normalisations{' '}<span set:html={tex('\\sigma_\\star')} />{' '}and{' '}
+              <span set:html={tex('r_{{\\rm cut},\\star}')} />, the slopes{' '}<span set:html={tex('\\alpha_\\sigma')} />{' '}
+              and{' '}<span set:html={tex('\\beta_r')} />, and the scatters{' '}<span set:html={tex('s_\\sigma')} />{' '}and{' '}
+              <span set:html={tex('s_r')} />.
+            </li>
+            <li>
+              <strong>One pair per member:</strong> the deviations{' '}<span set:html={tex('z_{\\sigma,g}')} />{' '}and{' '}
+              <span set:html={tex('z_{r,g}')} />, in units of the population scatter. The exponential keeps both quantities
+              positive and lets faint and bright galaxies stray by the same fraction.
+            </li>
+            <li>
+              <strong>Why not just free a few?</strong> The members sitting next to multiple images are the ones that
+              constrain the relation best. Fit them on their own and that information is lost to the population.
+            </li>
+            <li>
+              <strong>Stray and inform at once.</strong> Because each deviation is measured against the shared relation,
+              a member can sit off the line and still pull on its height, slope and scatter. The relation is inferred from
+              all of them, not imposed on them.
+            </li>
+          </ul>
+        </div>
+        <p class="aside">
+          The galaxies and the size of the scatter are illustrative, with a Faber–Jackson slope for the line. They are not a
+          fitted model.
+        </p>
       </div>
     </section>
 

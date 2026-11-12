@@ -1,0 +1,510 @@
+---
+// Member galaxies on a luminosity scaling relation with individual deviations:
+//   sigma_g = sigma_star (L_g / L_star)^alpha * exp(s * z_g).
+// Each made-up member has its own z_g, which wanders at random while the
+// population scatter s sweeps, so every dot strays from the line by its own
+// amount but stays tethered to it. The "few set free" mode shows the conventional setup:
+// everyone on the line except a handful fitted on their own.
+---
+
+<div class="scal" data-scaling-demo>
+  <figure class="chart-fig">
+    <svg class="chart" viewBox="0 0 460 380" role="img" aria-label="Velocity dispersion against luminosity for made-up member galaxies. A line marks the scaling relation and every galaxy sits a little above or below it, joined to it by a short tether.">
+      <defs>
+        <clipPath id="scaling-clip"><rect x="46" y="14" width="400" height="320"></rect></clipPath>
+      </defs>
+      <rect x="46" y="14" width="400" height="320" class="frame"></rect>
+      <g clip-path="url(#scaling-clip)">
+        <path data-band class="band"></path>
+        <line data-relation class="relation"></line>
+        <g data-tethers></g>
+        <g data-dots></g>
+      </g>
+      <line data-star-x class="guide" y1="14" y2="334"></line>
+      <line data-star-y class="guide" x1="46" x2="446"></line>
+      <text data-star-x-label y="350" text-anchor="middle" class="num">L★</text>
+      <text data-star-y-label x="40" text-anchor="end" class="num">σ★</text>
+      <text x="246" y="370" text-anchor="middle" class="axis">luminosity (faint → bright, log)</text>
+      <text x="16" y="174" text-anchor="middle" transform="rotate(-90 16 174)" class="axis">velocity dispersion (log)</text>
+    </svg>
+    <figcaption data-caption></figcaption>
+  </figure>
+
+  <div class="side">
+    <p class="readout">
+      <span>Intrinsic scatter <i>s</i><sub>σ</sub></span>
+      <strong data-scatter>–</strong>
+    </p>
+
+    <svg class="spec" viewBox="0 0 320 150" role="img" aria-label="Distribution of the members' deviations from the relation: a bell curve whose width is the intrinsic scatter, with one tick per member.">
+      <rect x="14" y="12" width="292" height="98" class="frame"></rect>
+      <path data-bell-fill class="bell-fill"></path>
+      <path data-bell class="bell"></path>
+      <g data-rug></g>
+      <line x1="160" x2="160" y1="12" y2="110" class="guide"></line>
+      <text x="62" y="124" text-anchor="middle" class="num">× 0.67</text>
+      <text x="160" y="124" text-anchor="middle" class="num">× 1</text>
+      <text x="258" y="124" text-anchor="middle" class="num">× 1.5</text>
+      <text x="160" y="142" text-anchor="middle" class="axis">each member, relative to the relation</text>
+    </svg>
+
+    <div class="controls">
+      <label class="slider">
+        <span><i>s</i><sub>σ</sub></span>
+        <input type="range" min="0" max="1" step="0.001" value="0.5" data-slider aria-label="Intrinsic scatter about the scaling relation" />
+      </label>
+      <fieldset class="seg">
+        <legend class="sr">Model</legend>
+        <label>
+          <input type="radio" name="scaling-mode" value="all" checked />
+          <span>All may stray</span>
+        </label>
+        <label>
+          <input type="radio" name="scaling-mode" value="few" />
+          <span>A few set free</span>
+        </label>
+      </fieldset>
+      <button type="button" data-reroll title="Draw new deviations for every member">Re-roll</button>
+      <button type="button" data-pause aria-pressed="false">Pause</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .scal {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 44px);
+    align-items: center;
+    margin-top: 34px;
+  }
+  .chart-fig {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .chart,
+  .spec {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  figcaption {
+    justify-self: center;
+    text-align: center;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 52ch;
+    min-height: 4.5em;
+  }
+  figcaption :global(strong) {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .frame {
+    fill: rgba(20, 17, 26, 0.7);
+    stroke: var(--line);
+  }
+  .band {
+    fill: rgba(143, 199, 255, 0.1);
+  }
+  .relation {
+    stroke: var(--arc);
+    stroke-width: 2;
+  }
+  .guide {
+    stroke: var(--line-strong);
+    stroke-dasharray: 3 4;
+  }
+  .scal :global(.tether) {
+    stroke: rgba(242, 200, 145, 0.45);
+    stroke-width: 1;
+  }
+  .scal :global(.dot) {
+    fill: var(--crema-bright);
+    stroke: #1c120b;
+    stroke-width: 0.6;
+  }
+  .scal :global(.dot.free) {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1.4;
+    stroke-dasharray: 2.5 2;
+  }
+  .scal :global(.rug) {
+    stroke: var(--crema-bright);
+    stroke-width: 1;
+    opacity: 0.75;
+  }
+  .scal :global(.rug.free) {
+    stroke: var(--muted);
+    stroke-dasharray: 2 2;
+  }
+  .bell {
+    fill: none;
+    stroke: var(--arc);
+    stroke-width: 1.8;
+  }
+  .bell-fill {
+    fill: rgba(143, 199, 255, 0.1);
+  }
+  .num,
+  .axis {
+    fill: var(--muted);
+    font-size: 10px;
+    font-family: var(--font-body);
+  }
+  .num {
+    font-family: var(--font-mono);
+  }
+  .side {
+    display: grid;
+    gap: 12px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    color: var(--ink-soft);
+  }
+  .readout strong {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--arc);
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(20, 17, 26, 0.7);
+  }
+  .slider {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-soft);
+    flex: 1 1 100%;
+  }
+  .slider input {
+    flex: 1;
+    min-width: 80px;
+    accent-color: var(--crema);
+  }
+  .slider input:disabled {
+    opacity: 0.35;
+  }
+  .seg {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border: 0;
+    padding: 0;
+    margin: 0 auto 0 0;
+    color: var(--ink-soft);
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .seg label {
+    cursor: pointer;
+  }
+  .seg input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .seg label span {
+    display: inline-block;
+    padding: 5px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 13px;
+  }
+  .seg input:checked + span {
+    background: var(--crema);
+    border-color: var(--crema);
+    color: #1c120b;
+  }
+  .seg input:focus-visible + span {
+    outline: 2px solid var(--arc);
+    outline-offset: 2px;
+  }
+  button {
+    font: inherit;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  button:hover {
+    border-color: var(--crema);
+    color: var(--ink);
+  }
+  @media (max-width: 820px) {
+    .scal {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  import { mulberry32 } from '../lib/field';
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const N_MEMBERS = 72;
+  const ALPHA = 0.25; // Faber-Jackson slope
+  const S_MIN = 0.02;
+  const S_MAX = 0.3;
+  const S_FREE = 0.24; // offset scale of the hand-picked members in the conventional mode
+  const SWEEP_PERIOD = 16000;
+  const IDLE_AFTER = 3500;
+
+  // Chart frame and data ranges: x is log10(L / L_star), y is ln(sigma / sigma_star).
+  const X0 = 46;
+  const W = 400;
+  const Y0 = 14;
+  const H = 320;
+  const LX_MIN = -1.75;
+  const LX_MAX = 0.45;
+  const LY_MIN = -1.75;
+  const LY_MAX = 0.95;
+  const px = (lx: number) => X0 + (W * (lx - LX_MIN)) / (LX_MAX - LX_MIN);
+  const py = (ly: number) => Y0 + H - (H * (ly - LY_MIN)) / (LY_MAX - LY_MIN);
+  const mean = (lx: number) => ALPHA * Math.LN10 * lx;
+
+  // Deviation plot: x is ln(sigma_g / mean), centred at 160 with ln(1.5) at 258.
+  const DEV_PX = 98 / Math.log(1.5);
+
+  const CAPTIONS = {
+    all: '<strong>Every member strays by its own amount</strong> and stays tethered to the relation. All of them together set its height, its slope and the width of the band.',
+    few: '<strong>The conventional setup:</strong> everyone sits exactly on the line, except a few influential members fitted on their own (dashed). Those few no longer tell the relation anything.',
+  };
+
+  function init(root: HTMLElement) {
+    const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+    const band = $<SVGPathElement>('[data-band]');
+    const relation = $<SVGLineElement>('[data-relation]');
+    const tetherG = $<SVGGElement>('[data-tethers]');
+    const dotG = $<SVGGElement>('[data-dots]');
+    const rugG = $<SVGGElement>('[data-rug]');
+    const bell = $<SVGPathElement>('[data-bell]');
+    const bellFill = $<SVGPathElement>('[data-bell-fill]');
+    const slider = $<HTMLInputElement>('[data-slider]');
+    const scatterOut = $<HTMLElement>('[data-scatter]');
+    const caption = $<HTMLElement>('[data-caption]');
+    const pauseBtn = $<HTMLButtonElement>('[data-pause]');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Static furniture.
+    relation.setAttribute('x1', String(px(LX_MIN)));
+    relation.setAttribute('y1', String(py(mean(LX_MIN))));
+    relation.setAttribute('x2', String(px(LX_MAX)));
+    relation.setAttribute('y2', String(py(mean(LX_MAX))));
+    const sx = $<SVGLineElement>('[data-star-x]');
+    sx.setAttribute('x1', String(px(0)));
+    sx.setAttribute('x2', String(px(0)));
+    $<SVGTextElement>('[data-star-x-label]').setAttribute('x', String(px(0)));
+    const sy = $<SVGLineElement>('[data-star-y]');
+    sy.setAttribute('y1', String(py(0)));
+    sy.setAttribute('y2', String(py(0)));
+    $<SVGTextElement>('[data-star-y-label]').setAttribute('y', String(py(0) + 3.5));
+
+    // Made-up members: many faint, few bright.
+    const rndL = mulberry32(31);
+    const lum: number[] = [];
+    for (let i = 0; i < N_MEMBERS; i++) lum.push(0.3 - 1.9 * Math.pow(rndL(), 0.75));
+    // The handful a conventional model would fit on its own: the brightest ones.
+    const free = new Set(
+      lum
+        .map((l, i) => [l, i])
+        .sort((a, b) => b[0] - a[0])
+        .slice(1, 6)
+        .map((p) => p[1]),
+    );
+
+    const el = <K extends keyof SVGElementTagNameMap>(tag: K, cls: string, parent: Element) => {
+      const e = document.createElementNS(SVG_NS, tag);
+      e.setAttribute('class', cls);
+      parent.appendChild(e);
+      return e;
+    };
+    const dots = lum.map((l) => {
+      const c = el('circle', 'dot', dotG);
+      c.setAttribute('cx', px(l).toFixed(1));
+      c.setAttribute('r', (2.4 + (2.8 * (l - LX_MIN)) / (LX_MAX - LX_MIN)).toFixed(1));
+      return c;
+    });
+    const tethers = lum.map((l) => {
+      const t = el('line', 'tether', tetherG);
+      t.setAttribute('x1', px(l).toFixed(1));
+      t.setAttribute('x2', px(l).toFixed(1));
+      t.setAttribute('y1', py(mean(l)).toFixed(1));
+      return t;
+    });
+    const rugs = lum.map(() => {
+      const r = el('line', 'rug', rugG);
+      r.setAttribute('y1', '110');
+      r.setAttribute('y2', '101');
+      return r;
+    });
+
+    let seed = 909;
+    // Each deviation wanders at random but stays a unit Gaussian: it is a slow
+    // rotation between two independent draws, at a rate of its own.
+    let za: number[] = [];
+    let zb: number[] = [];
+    let rate: number[] = [];
+    let clock = 0; // seconds of animation so far
+    const z = new Float32Array(N_MEMBERS);
+    function roll() {
+      const rnd = mulberry32(seed);
+      const gauss = () => Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd());
+      za = lum.map(gauss);
+      zb = lum.map(gauss);
+      rate = lum.map(() => (0.35 + 0.75 * rnd()) * (rnd() < 0.5 ? -1 : 1));
+    }
+    function wander() {
+      for (let i = 0; i < N_MEMBERS; i++) {
+        const a = rate[i] * clock;
+        z[i] = za[i] * Math.cos(a) + zb[i] * Math.sin(a);
+      }
+    }
+
+    let mode: 'all' | 'few' = 'all';
+    let u = 0.5;
+    const scatterOf = (v: number) => S_MIN + (S_MAX - S_MIN) * v;
+
+    function render() {
+      const s = scatterOf(u);
+      const few = mode === 'few';
+      if (!few) wander();
+
+      band.setAttribute(
+        'd',
+        few
+          ? ''
+          : `M${px(LX_MIN)} ${py(mean(LX_MIN) + s)}L${px(LX_MAX)} ${py(mean(LX_MAX) + s)}L${px(LX_MAX)} ${py(mean(LX_MAX) - s)}L${px(LX_MIN)} ${py(mean(LX_MIN) - s)}Z`,
+      );
+
+      for (let i = 0; i < N_MEMBERS; i++) {
+        const isFree = few && free.has(i);
+        const dev = few ? (isFree ? S_FREE * 2.2 * Math.sign(z[i] || 1) * (0.6 + 0.4 * Math.abs(Math.tanh(z[i]))) : 0) : s * z[i];
+        const y = py(mean(lum[i]) + dev).toFixed(1);
+        dots[i].setAttribute('cy', y);
+        dots[i].classList.toggle('free', isFree);
+        tethers[i].setAttribute('y2', y);
+        tethers[i].style.display = few ? 'none' : '';
+        const rx = (160 + DEV_PX * dev).toFixed(1);
+        rugs[i].setAttribute('x1', rx);
+        rugs[i].setAttribute('x2', rx);
+        rugs[i].classList.toggle('free', isFree);
+      }
+
+      // Bell curve of the deviations, drawn at a fixed peak height.
+      let d = '';
+      if (!few) {
+        for (let i = 0; i <= 80; i++) {
+          const x = 14 + (292 * i) / 80;
+          const dv = (x - 160) / DEV_PX;
+          d += `${i ? 'L' : 'M'}${x.toFixed(1)} ${(110 - 84 * Math.exp((-dv * dv) / (2 * s * s))).toFixed(1)}`;
+        }
+      }
+      bell.setAttribute('d', d);
+      bellFill.setAttribute('d', d ? `${d}L306 110L14 110Z` : '');
+
+      scatterOut.textContent = few ? 'none' : `${Math.round(s * 100)}%`;
+      slider.value = u.toFixed(3);
+      slider.disabled = few;
+    }
+
+    let paused = reduceMotion;
+    let visible = false;
+    let lastInput = -Infinity;
+    let phase = Math.PI / 2; // u = 0.5 - 0.5 cos(phase)
+    let last = 0;
+    let raf = 0;
+
+    function frame(now: number) {
+      raf = 0;
+      const dt = Math.min(now - last, 100);
+      last = now;
+      if (!paused && mode === 'all') {
+        clock += dt / 1000;
+        if (now - lastInput > IDLE_AFTER) {
+          phase += (2 * Math.PI * dt) / SWEEP_PERIOD;
+          u = 0.5 - 0.5 * Math.cos(phase);
+        }
+        render();
+      }
+      schedule();
+    }
+    function schedule() {
+      if (!raf && visible && !paused) {
+        raf = requestAnimationFrame((t) => {
+          if (!last) last = t;
+          frame(t);
+        });
+      }
+    }
+    function setPaused(p: boolean) {
+      paused = p;
+      pauseBtn.textContent = p ? 'Play' : 'Pause';
+      pauseBtn.setAttribute('aria-pressed', String(p));
+      if (!p) {
+        last = 0;
+        lastInput = -Infinity;
+        schedule();
+      }
+    }
+
+    slider.addEventListener('input', () => {
+      u = Number(slider.value);
+      const rising = Math.sin(phase) >= 0;
+      const a = Math.acos(1 - 2 * u);
+      phase = rising ? a : 2 * Math.PI - a;
+      lastInput = performance.now();
+      render();
+    });
+    root.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((r) =>
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        mode = r.value as 'all' | 'few';
+        caption.innerHTML = CAPTIONS[mode];
+        render();
+      }),
+    );
+    $('[data-reroll]').addEventListener('click', () => {
+      seed = (seed * 1664525 + 1013904223) | 0;
+      roll();
+      render();
+    });
+    pauseBtn.addEventListener('click', () => setPaused(!paused));
+
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      last = 0;
+      schedule();
+    }).observe(root);
+
+    roll();
+    caption.innerHTML = CAPTIONS[mode];
+    setPaused(paused);
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-scaling-demo]').forEach(init);
+</script>
