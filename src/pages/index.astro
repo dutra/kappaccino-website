@@ -143,6 +143,7 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
       </a>
       <nav aria-label="Sections">
         <a href="#menu">Features</a>
+        <a href="#error-bars">Error bars</a>
         <a href="#recipe">How it works</a>
         <a href="#first-sip">Quickstart</a>
         <a href="#tested">Clusters</a>
@@ -215,6 +216,55 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
           <li>Convergence diagnostics</li>
           <li>Bundled cluster catalogs</li>
         </ul>
+      </div>
+    </section>
+
+    <!-- ───────────── Uncertainty on images and critical curves ───────────── -->
+    <section id="error-bars" class="foam">
+      <div class="wrap">
+        <p class="eyebrow">Served with error bars</p>
+        <h2 class="section-title">Images and critical curves, give or take</h2>
+        <p class="section-lede">
+          kappaccino tries to capture what can go wrong in a lens model and carry it all the way to the answers. Every image
+          position comes back with its uncertainty, and so does every critical curve.
+        </p>
+
+        <FoldDemo />
+
+        <div class="foam-notes">
+          <div>
+            <p>
+              On the left is an exact lens, an isothermal sphere with external shear, with the source near its centre so
+              that it is drawn out into an Einstein ring. On the right is a toy fold pair: two images of the same source on
+              opposite sides of a critical curve. Each dot is where one plausible model puts an image, and the band is where
+              those models put the critical curve. Leave it alone and the source drifts away and back.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <strong>Stretched, not round.</strong> Near a critical curve a small change in the deflection moves an image a
+              long way, mostly along the stretched direction. The position uncertainty becomes elongated, and can turn curved
+              or even split. Around the ring that direction runs along the ring, so the uncertainty does too.
+            </li>
+            <li>
+              <strong>Same place, different magnification.</strong> Two models can put an image at nearly the same position
+              and the critical curve in different places. The magnification then changes far more than the position, so a
+              small rms is no guarantee of a good magnification.
+            </li>
+            <li>
+              <strong>Fold pairs pin the curve.</strong> Their separation and opposite parities constrain where the curve
+              passes between them, which is why the band is narrowest at the pair.
+            </li>
+            <li>
+              <strong>Checked the long way.</strong> The likelihood uses a local expansion of the lens mapping, which can
+              fail this close to a critical curve. So kappaccino also solves the lens equation for posterior draws and looks
+              at the recovered images directly. The likelihood itself is explained{' '}<a href="#recipe">just below</a>.
+            </li>
+          </ul>
+        </div>
+        <p class="aside">
+          Both panels use made-up numbers, chosen to show the behaviour. Neither is a kappaccino model of a real cluster.
+        </p>
       </div>
     </section>
 
@@ -352,7 +402,7 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
           <p class="aside">
             Try it in the toy above: turn up <em>Unmodeled mass</em> and watch nearby images shift together while the critical
             curves wobble. The <a href="#foam">mass field</a> and the{' '}
-            <a href="#shifts">image-plane shifts</a>{' '}each get a demo further down.
+            <a href="#shifts">image-plane shifts</a>{' '}each get a demo further down, after the <a href="#members">member galaxies</a>.
           </p>
         </article>
 
@@ -535,55 +585,6 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
       </div>
     </section>
 
-    <!-- ───────────── Uncertainty on images and critical curves ───────────── -->
-    <section id="error-bars" class="foam">
-      <div class="wrap">
-        <p class="eyebrow">Served with error bars</p>
-        <h2 class="section-title">Images and critical curves, give or take</h2>
-        <p class="section-lede">
-          kappaccino tries to capture what can go wrong in a lens model and carry it all the way to the answers. Every image
-          position comes back with its uncertainty, and so does every critical curve.
-        </p>
-
-        <FoldDemo />
-
-        <div class="foam-notes">
-          <div>
-            <p>
-              On the left is an exact lens, an isothermal sphere with external shear, with the source near its centre so
-              that it is drawn out into an Einstein ring. On the right is a toy fold pair: two images of the same source on
-              opposite sides of a critical curve. Each dot is where one plausible model puts an image, and the band is where
-              those models put the critical curve. Leave it alone and the source drifts away and back.
-            </p>
-          </div>
-          <ul>
-            <li>
-              <strong>Stretched, not round.</strong> Near a critical curve a small change in the deflection moves an image a
-              long way, mostly along the stretched direction. The position uncertainty becomes elongated, and can turn curved
-              or even split. Around the ring that direction runs along the ring, so the uncertainty does too.
-            </li>
-            <li>
-              <strong>Same place, different magnification.</strong> Two models can put an image at nearly the same position
-              and the critical curve in different places. The magnification then changes far more than the position, so a
-              small rms is no guarantee of a good magnification.
-            </li>
-            <li>
-              <strong>Fold pairs pin the curve.</strong> Their separation and opposite parities constrain where the curve
-              passes between them, which is why the band is narrowest at the pair.
-            </li>
-            <li>
-              <strong>Checked the long way.</strong> The likelihood uses a local expansion of the lens mapping, which can
-              fail this close to a critical curve. So kappaccino also solves the lens equation for posterior draws and looks
-              at the recovered images directly.
-            </li>
-          </ul>
-        </div>
-        <p class="aside">
-          Both panels use made-up numbers, chosen to show the behaviour. Neither is a kappaccino model of a real cluster.
-        </p>
-      </div>
-    </section>
-
     <!-- ───────────── Quickstart ───────────── -->
     <section id="first-sip">
       <div class="wrap">
@@ -760,6 +761,7 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
   .nav nav a,
   .nav-cta > a:not(.btn) {
     color: var(--ink-soft);
+    white-space: nowrap;
     text-decoration: none;
     font-size: 14.5px;
   }
@@ -776,7 +778,7 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
     padding: 7px 15px;
     font-size: 14px;
   }
-  @media (max-width: 860px) {
+  @media (max-width: 980px) {
     .nav nav {
       display: none;
     }
@@ -1343,7 +1345,7 @@ halo = DPIEHaloConfig("1", 0.0, 0.0, 0.3, 30.0, 10.0, 1500.0, 800.0, z_lens=0.5,
     color: var(--ink);
     font-weight: 600;
   }
-  .foam .aside a,
+  .foam-notes a,
   .aside a {
     color: var(--crema-bright);
   }
