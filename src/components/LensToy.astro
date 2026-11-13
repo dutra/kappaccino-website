@@ -10,13 +10,15 @@
 import cupImage from '../assets/abell-s1063-webb.jpg';
 
 // `formal` switches the visible wording to an academic register (used by the slides).
+// `autoMass` makes the unmodeled-mass amplitude sweep on its own while idle.
 interface Props {
   formal?: boolean;
+  autoMass?: boolean;
 }
-const { formal = false } = Astro.props;
+const { formal = false, autoMass = false } = Astro.props;
 ---
 
-<div class="toy" data-lens-toy data-bg={cupImage.src}>
+<div class="toy" data-lens-toy data-bg={cupImage.src} data-auto-mass={autoMass ? '' : undefined}>
   <div class="cup">
     <canvas
       tabindex="0"
@@ -248,6 +250,8 @@ const { formal = false } = Astro.props;
     const grfSlider = root.querySelector<HTMLInputElement>('[data-grf]')!;
     const reroll = root.querySelector<HTMLButtonElement>('[data-reroll]')!;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const autoMass = root.hasAttribute('data-auto-mass');
+    let lastMassInput = -Infinity;
 
     const P = N * N;
     const a0x = new Float32Array(P); // parametric deflection
@@ -525,6 +529,13 @@ const { formal = false } = Astro.props;
         sx = 0.5 * Math.cos(0.21 * t + 0.4);
         sy = 0.32 * Math.sin(0.29 * t + 1.1);
         dirty = true;
+        // Optionally breathe the unmodeled-mass amplitude between zero and its
+        // upper range, unless the slider was touched recently.
+        if (autoMass && now - lastMassInput > 3500) {
+          const max = 0.8 * parseFloat(grfSlider.max);
+          grfSlider.value = (0.5 * max * (1 - Math.cos(0.45 * t))).toFixed(4);
+          rebuildMapping();
+        }
       }
       if (dirty) {
         draw();
@@ -571,6 +582,7 @@ const { formal = false } = Astro.props;
       });
     }
     grfSlider.addEventListener('input', () => {
+      lastMassInput = performance.now();
       rebuildMapping();
       dirty = true;
       schedule();

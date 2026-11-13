@@ -13,6 +13,9 @@ interface Props {
 const { title, description } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// Link previews need an absolute image URL.
+const shareImage = new URL(`${base}og.jpg`, Astro.site);
+const shareAlt = 'kappaccino: cluster lens models, freshly brewed. The galaxy cluster Abell S1063 seen by Webb, framed as a coffee cup.';
 
 // A fixed, seeded starfield so every build draws the same sky.
 let seed = 20261111;
@@ -48,7 +51,17 @@ const stars = Array.from({ length: 170 }, () => {
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:site_name" content="kappaccino" />
+    <meta property="og:image" content={shareImage} />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={shareAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={shareImage} />
+    <meta name="twitter:image:alt" content={shareAlt} />
   </head>
   <body>
     <svg class="sky" viewBox="0 0 1600 2400" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
