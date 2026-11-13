@@ -14,6 +14,12 @@
 // Einstein radius, the shear and the source position.
 //
 // Illustrative numbers throughout, not a kappaccino model.
+
+// `formal` switches the visible wording to an academic register (used by the slides).
+interface Props {
+  formal?: boolean;
+}
+const { formal = false } = Astro.props;
 ---
 
 <div class="fold" data-fold-demo>
@@ -21,18 +27,18 @@
     <div class="panels">
       <div class="panel">
         <canvas data-panel="ring" aria-hidden="true"></canvas>
-        <p><strong>Einstein ring</strong> from a source near the lens centre</p>
+        <p><strong>Einstein ring</strong> {formal ? '(isothermal lens with external shear)' : 'from a source near the lens centre'}</p>
       </div>
       <div class="panel">
         <canvas data-panel="fold" aria-hidden="true"></canvas>
-        <p><strong>Fold pair</strong> straddling the curve</p>
+        <p><strong>Fold pair</strong> {formal ? '(lowest-order fold mapping)' : 'straddling the curve'}</p>
       </div>
     </div>
     <figcaption>
-      <span class="key"><i class="sw sw-sq"></i>catalog positions</span>
-      <span class="key"><i class="sw sw-arc"></i>the lensed source</span>
-      <span class="key"><i class="sw sw-cloud"></i>where the model draws put each image</span>
-      <span class="key"><i class="sw sw-curve"></i>critical curve, median with 68% and 95% bands</span>
+      <span class="key"><i class="sw sw-sq"></i>{formal ? 'catalogued positions' : 'catalog positions'}</span>
+      <span class="key"><i class="sw sw-arc"></i>{formal ? 'lensed source' : 'the lensed source'}</span>
+      <span class="key"><i class="sw sw-cloud"></i>{formal ? 'predicted image positions across model draws' : 'where the model draws put each image'}</span>
+      <span class="key"><i class="sw sw-curve"></i>{formal ? 'critical curve: median, 68% and 95% intervals' : 'critical curve, median with 68% and 95% bands'}</span>
     </figcaption>
   </figure>
 
@@ -70,15 +76,15 @@
           );
         })
       }
-      <text x="160" y="128" text-anchor="middle" class="axis">one tick per model draw; bar spans 68%</text>
+      <text x="160" y="128" text-anchor="middle" class="axis">{formal ? 'ticks: individual model draws; bar: 68% interval' : 'one tick per model draw; bar spans 68%'}</text>
     </svg>
 
     <p class="readout small">
-      <span>Draws where the ring source has four images</span>
+      <span>{formal ? 'Fraction of draws with four images (ring)' : 'Draws where the ring source has four images'}</span>
       <strong data-flip>–</strong>
     </p>
     <p class="readout small">
-      <span>Draws where the fold pair has merged away</span>
+      <span>{formal ? 'Fraction of draws without the fold pair' : 'Draws where the fold pair has merged away'}</span>
       <strong data-gone>–</strong>
     </p>
 
@@ -91,7 +97,7 @@
         <span>Model uncertainty</span>
         <input type="range" min="0.3" max="2" step="0.01" value="1" data-unc aria-label="Size of the model uncertainty" />
       </label>
-      <button type="button" data-reroll title="Draw a new set of models">Re-roll</button>
+      <button type="button" data-reroll title="Draw a new set of models">{formal ? 'Resample' : 'Re-roll'}</button>
       <button type="button" data-pause aria-pressed="false">Pause</button>
     </div>
   </div>

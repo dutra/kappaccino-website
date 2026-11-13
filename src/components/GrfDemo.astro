@@ -7,6 +7,12 @@
 // own rms; the numbers are illustrative, not a fitted model.
 const FIELD = 60; // arcsec across each cup
 const ticks = [50, 20, 10, 5, 2];
+
+// `formal` switches the visible wording to an academic register (used by the slides).
+interface Props {
+  formal?: boolean;
+}
+const { formal = false } = Astro.props;
 ---
 
 <div class="grf" data-grf-demo data-field={FIELD}>
@@ -15,9 +21,20 @@ const ticks = [50, 20, 10, 5, 2];
       <canvas width="256" height="256" aria-hidden="true"></canvas>
       <span class="ruler" data-ruler aria-hidden="true"></span>
       <figcaption>
-        <strong>One random realization</strong> of the unmodeled mass, <i>δκ</i>, drawn before any data. In a fit the
-        field is conditioned on the image positions, so the residuals the parametric lens leaves behind pin it down near
-        the images.
+        {
+          formal ? (
+            <>
+              <strong>A single prior realization</strong> of the convergence perturbation <i>δκ</i>. During inference the
+              field is conditioned on the observed image positions.
+            </>
+          ) : (
+            <>
+              <strong>One random realization</strong> of the unmodeled mass, <i>δκ</i>, drawn before any data. In a fit the
+              field is conditioned on the image positions, so the residuals the parametric lens leaves behind pin it down
+              near the images.
+            </>
+          )
+        }
       </figcaption>
     </figure>
   </div>
@@ -52,8 +69,8 @@ const ticks = [50, 20, 10, 5, 2];
           );
         })
       }
-      <text x="171" y="164" text-anchor="middle" class="spec-axis">angular scale λ (large → small)</text>
-      <text x="14" y="71" text-anchor="middle" transform="rotate(-90 14 71)" class="spec-axis">power (log)</text>
+      <text x="171" y="164" text-anchor="middle" class="spec-axis">{formal ? 'angular scale λ' : 'angular scale λ (large → small)'}</text>
+      <text x="14" y="71" text-anchor="middle" transform="rotate(-90 14 71)" class="spec-axis">{formal ? 'log power' : 'power (log)'}</text>
     </svg>
 
     <div class="controls">
@@ -72,14 +89,14 @@ const ticks = [50, 20, 10, 5, 2];
           ))
         }
       </fieldset>
-      <button type="button" data-reroll title="Draw a new realization">Re-roll</button>
+      <button type="button" data-reroll title="Draw a new realization">{formal ? 'Resample' : 'Re-roll'}</button>
       <button type="button" data-pause aria-pressed="false">Pause</button>
     </div>
 
     <p class="legend">
       <span class="ramp" aria-hidden="true"></span>
-      <span>less mass</span>
-      <span class="legend-right">more mass</span>
+      <span>{formal ? 'underdense' : 'less mass'}</span>
+      <span class="legend-right">{formal ? 'overdense' : 'more mass'}</span>
     </p>
   </div>
 </div>

@@ -9,6 +9,12 @@
 const FIELD = 60; // arcsec across the cup
 const R_MAX = 30; // arcsec, right edge of the kernel plot
 const ticks = [0, 10, 20, 30];
+
+// `formal` switches the visible wording to an academic register (used by the slides).
+interface Props {
+  formal?: boolean;
+}
+const { formal = false } = Astro.props;
 ---
 
 <div class="gp" data-gp-demo data-field={FIELD} data-rmax={R_MAX}>
@@ -17,8 +23,21 @@ const ticks = [0, 10, 20, 30];
       <canvas aria-hidden="true"></canvas>
       <span class="ruler" data-ruler aria-hidden="true"></span>
       <figcaption>
-        <strong>One random realization</strong> of the image-plane shifts, drawn before any data. Dots are made-up image
-        positions and arrows their shifts, enlarged to be visible. The faint arrows show the field everywhere else.
+        {
+          formal ? (
+            <>
+              <strong>A single prior realization</strong> of the image-plane displacement field. Points mark illustrative
+              image positions and arrows their displacements, exaggerated for visibility. Faint arrows trace the field
+              elsewhere.
+            </>
+          ) : (
+            <>
+              <strong>One random realization</strong> of the image-plane shifts, drawn before any data. Dots are made-up
+              image positions and arrows their shifts, enlarged to be visible. The faint arrows show the field everywhere
+              else.
+            </>
+          )
+        }
       </figcaption>
     </figure>
   </div>
@@ -55,7 +74,7 @@ const ticks = [0, 10, 20, 30];
       }
       <text x="30" y="26" text-anchor="end" class="spec-num">1</text>
       <text x="30" y="133" text-anchor="end" class="spec-num">0</text>
-      <text x="171" y="164" text-anchor="middle" class="spec-axis">separation between two images</text>
+      <text x="171" y="164" text-anchor="middle" class="spec-axis">{formal ? 'image separation' : 'separation between two images'}</text>
       <text x="14" y="71" text-anchor="middle" transform="rotate(-90 14 71)" class="spec-axis">correlation</text>
     </svg>
 
@@ -64,7 +83,7 @@ const ticks = [0, 10, 20, 30];
         <span><i>ℓ</i><sub>GP</sub></span>
         <input type="range" min="0" max="1" step="0.001" value="0.5" data-slider aria-label="Correlation length of the image-plane shifts" />
       </label>
-      <button type="button" data-reroll title="Draw a new realization">Re-roll</button>
+      <button type="button" data-reroll title="Draw a new realization">{formal ? 'Resample' : 'Re-roll'}</button>
       <button type="button" data-pause aria-pressed="false">Pause</button>
     </div>
   </div>

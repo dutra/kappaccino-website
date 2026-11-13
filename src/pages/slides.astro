@@ -1,0 +1,573 @@
+---
+// Slide deck for talks. It reuses the live demos from the landing page.
+// Every slide is laid out on a fixed 1280 x 720 stage that is scaled to fit
+// the window. Keys: arrows, PageUp/PageDown or space to move, Home/End to
+// jump, F for fullscreen.
+import { Code } from 'astro:components';
+import katex from 'katex';
+import Base from '../layouts/Base.astro';
+import Logo from '../components/Logo.astro';
+import LensToy from '../components/LensToy.astro';
+import FoldDemo from '../components/FoldDemo.astro';
+import GrfDemo from '../components/GrfDemo.astro';
+import GpDemo from '../components/GpDemo.astro';
+import ScalingDemo from '../components/ScalingDemo.astro';
+
+const tex = (s: string, display = false) => katex.renderToString(s, { displayMode: display, throwOnError: true });
+
+const contributions = [
+  {
+    glyph: '∇',
+    title: 'Gradient-based inference',
+    body: 'Implemented in JAX and NumPyro. Automatic differentiation and just-in-time compilation enable Hamiltonian Monte Carlo over several hundred parameters.',
+  },
+  {
+    glyph: 'C',
+    title: 'Structured positional uncertainties',
+    body: 'Measurement errors, unmodeled mass, and image-plane displacements are modeled separately and inferred jointly with the lens.',
+  },
+  {
+    glyph: 'σ★',
+    title: 'Hierarchical member population',
+    body: 'Every member galaxy may deviate from the luminosity scaling relations while constraining the population parameters.',
+  },
+];
+
+const errors = [
+  {
+    sym: '\\mathbf C_{\\rm meas}',
+    title: 'Measurement uncertainty',
+    body: 'Uncorrelated scatter in the catalogued positions, propagated through the lensing Jacobian. Its amplitude is inferred.',
+    tag: 'uncorrelated',
+  },
+  {
+    sym: '\\mathbf C_{\\rm GRF}',
+    title: 'Unmodeled mass',
+    body: 'Deflection perturbations from a Gaussian random field. They scale with source redshift and remain finite on critical curves.',
+    tag: 'contributes mass',
+  },
+  {
+    sym: '\\mathbf C_{\\rm GP}',
+    title: 'Image-plane displacements',
+    body: 'Correlated offsets unrelated to the cluster mass: line-of-sight structure, feature matching along arcs, residual astrometry.',
+    tag: 'no mass',
+  },
+];
+
+const pipeline = [
+  { step: '1', title: 'Input', body: 'Image and member catalogs; model specified in Python or imported from a Lenstool parameter file.' },
+  { step: '2', title: 'Optimisation', body: 'Multi-start gradient-based optimisation locates the posterior mode.' },
+  { step: '3', title: 'Member classification', body: 'Nearby members are evaluated exactly; distant members through a far-field expansion.' },
+  { step: '4', title: 'Sampling', body: 'NUTS jointly samples lens parameters, member deviations, hyperparameters, and source positions.' },
+  { step: '5', title: 'Output', body: 'Posterior samples, convergence diagnostics, and lensing maps.' },
+];
+
+const installCode = `git clone https://github.com/dutra/kappaccino.git
+cd kappaccino
+python -m pip install -e .`;
+---
+
+<Base title="kappaccino · slides" description="Slides introducing kappaccino, a Bayesian cluster strong-lensing code written in JAX.">
+  <div class="deck" data-deck>
+    <!-- 1 · title -->
+    <div class="slide title-slide">
+      <div class="title-text">
+        <p class="brand"><Logo size={44} /><span><i>κ</i>appaccino</span></p>
+        <h1>A differentiable Bayesian framework for cluster strong-lens modeling</h1>
+        <p class="lede">
+          Correlated positional uncertainties, unmodeled mass, and hierarchical member scaling relations.
+        </p>
+        <p class="authors">
+          Isaque Dutra<sup>1</sup>, Priyamvada Natarajan<sup>1</sup>, Colin J. Burke<sup>2</sup><br />
+          <span><sup>1</sup>Yale University · <sup>2</sup>University of North Texas</span>
+        </p>
+      </div>
+      <div class="title-toy"><LensToy formal /></div>
+    </div>
+
+    <!-- 2 · contributions -->
+    <div class="slide">
+      <p class="eyebrow">Overview</p>
+      <h2>Motivation and contributions</h2>
+      <p class="lede">
+        Current cluster catalogs contain hundreds of multiple images and hundreds of member galaxies. Conventional parametric
+        models fix the positional uncertainty in advance and fit only a few members individually.
+      </p>
+      <ul class="cards three">
+        {
+          contributions.map((c) => (
+            <li>
+              <span class="glyph">{c.glyph}</span>
+              <h3>{c.title}</h3>
+              <p>{c.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <!-- 3 · likelihood -->
+    <div class="slide">
+      <p class="eyebrow">Likelihood</p>
+      <h2>A local image-plane likelihood</h2>
+      <p class="lede">
+        Predicting image positions requires all roots of the lens equation, which is costly and not differentiable. The
+        inverse mapping requires a single deflection evaluation per image.
+      </p>
+      <div class="big-eq" set:html={tex('\\boldsymbol\\beta_i=\\boldsymbol\\theta_i-\\boldsymbol\\alpha(\\boldsymbol\\theta_i),\\qquad \\boldsymbol F_i=\\boldsymbol\\beta_i-\\boldsymbol\\beta_k', true)} />
+      <ul class="points">
+        <li>Each observed image is mapped to the source plane and compared with its source position, which is sampled jointly with the lens.</li>
+        <li>Residuals are evaluated in the image plane through a local expansion of the lens mapping.</li>
+        <li>The likelihood is smooth and differentiable with respect to all model parameters.</li>
+      </ul>
+    </div>
+
+    <!-- 4 · uncertainty on images and critical curves -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Uncertainty propagation</p>
+      <h2>Uncertainties on image positions and critical curves</h2>
+      <FoldDemo formal />
+    </div>
+
+    <!-- 5 · covariance -->
+    <div class="slide">
+      <p class="eyebrow">Positional covariance</p>
+      <h2>Three contributions to the positional covariance</h2>
+      <div class="big-eq" set:html={tex('\\mathbf C=\\mathbf C_{\\rm meas}+\\mathbf C_{\\rm GRF}+\\mathbf C_{\\rm GP}', true)} />
+      <ul class="cards three">
+        {
+          errors.map((e) => (
+            <li>
+              <div class="card-top">
+                <span class="sym" set:html={tex(e.sym)} />
+                <span class="tag">{e.tag}</span>
+              </div>
+              <h3>{e.title}</h3>
+              <p>{e.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="foot">The amplitude and correlation scale of each term are inferred jointly with the lens model.</p>
+    </div>
+
+    <!-- 6 · random field -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Unmodeled mass</p>
+      <h2>A Gaussian random field for unmodeled mass</h2>
+      <GrfDemo formal />
+    </div>
+
+    <!-- 7 · image-plane GP -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Image-plane systematics</p>
+      <h2>A Gaussian process for correlated image-plane displacements</h2>
+      <GpDemo formal />
+    </div>
+
+    <!-- 8 · members -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Member galaxies</p>
+      <h2>Hierarchical scaling relations with individual deviations</h2>
+      <ScalingDemo formal />
+    </div>
+
+    <!-- 9 · inference -->
+    <div class="slide">
+      <p class="eyebrow">Inference</p>
+      <h2>Two-stage inference: optimisation, then sampling</h2>
+      <p class="lede">
+        Posterior sampling in several hundred dimensions is inefficient from an arbitrary starting point. The posterior mode is
+        located first and used to initialise the sampler.
+      </p>
+      <ol class="cards five">
+        {
+          pipeline.map((p) => (
+            <li>
+              <span class="step">Step {p.step}</span>
+              <h3>{p.title}</h3>
+              <p>{p.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <!-- 10 · availability -->
+    <div class="slide">
+      <p class="eyebrow">Availability</p>
+      <h2>Code and documentation</h2>
+      <div class="try">
+        <div class="code"><Code code={installCode} lang="bash" theme="vitesse-dark" /></div>
+        <ul class="links">
+          <li><span>Code</span><a href="https://github.com/dutra/kappaccino">github.com/dutra/kappaccino</a></li>
+          <li><span>Docs</span><a href="https://kappaccino.readthedocs.io/">kappaccino.readthedocs.io</a></li>
+          <li><span>Site</span><a href="https://dutra.github.io/kappaccino-website/">dutra.github.io/kappaccino-website</a></li>
+          <li><span>Paper</span>in preparation</li>
+        </ul>
+      </div>
+      <p class="foot">Existing Lenstool parameter files can be imported directly as a starting model.</p>
+    </div>
+  </div>
+
+  <div class="hud" aria-hidden="true">
+    <span class="bar"><i data-bar></i></span>
+    <span class="count" data-count></span>
+  </div>
+</Base>
+
+<style>
+  :global(html),
+  :global(body) {
+    height: 100%;
+    overflow: hidden;
+  }
+  .deck {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+  .slide {
+    display: none;
+    width: 1280px;
+    height: 720px;
+    padding: 46px 64px 40px;
+    flex-direction: column;
+    justify-content: center;
+    flex: none;
+  }
+  .demo-slide {
+    justify-content: flex-start;
+  }
+  .slide.active {
+    display: flex;
+  }
+
+  .eyebrow {
+    margin-bottom: 10px;
+  }
+  h2 {
+    font-size: 2.3rem;
+    max-width: 28ch;
+  }
+  h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+  .lede {
+    margin-top: 16px;
+    max-width: 70ch;
+    color: var(--ink-soft);
+    font-size: 1.15rem;
+    line-height: 1.55;
+  }
+  .foot {
+    margin-top: 34px;
+    color: var(--muted);
+    font-size: 1rem;
+  }
+
+  /* ── title ── */
+  .title-slide.active {
+    flex-direction: row;
+    align-items: center;
+    gap: 56px;
+  }
+  .title-text {
+    flex: 1;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-display);
+    font-variation-settings: 'SOFT' 100, 'WONK' 1;
+    font-size: 1.9rem;
+    font-weight: 600;
+    margin-bottom: 34px;
+  }
+  .brand i {
+    color: var(--crema);
+    font-size: 1.12em;
+  }
+  h1 {
+    font-size: 2.9rem;
+    max-width: 19ch;
+  }
+  .authors {
+    margin-top: 40px;
+    color: var(--ink-soft);
+    font-size: 1.1rem;
+    line-height: 1.8;
+  }
+  .authors span {
+    color: var(--muted);
+    font-size: 0.98rem;
+  }
+  .title-toy {
+    width: 320px;
+    flex: none;
+  }
+
+  /* ── cards ── */
+  .cards {
+    list-style: none;
+    padding: 0;
+    margin: 36px 0 0;
+    display: grid;
+    gap: 18px;
+  }
+  .cards.three {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .cards.five {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  .cards li {
+    padding: 30px 28px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg-card);
+  }
+  .cards p {
+    margin-top: 10px;
+    color: var(--ink-soft);
+    font-size: 1.08rem;
+    line-height: 1.5;
+  }
+  .cards.five li {
+    padding: 20px 18px;
+  }
+  .cards.five h3 {
+    font-size: 1.15rem;
+  }
+  .cards.five p {
+    font-size: 0.95rem;
+  }
+  .glyph {
+    display: inline-grid;
+    place-items: center;
+    min-width: 46px;
+    height: 46px;
+    padding: 0 10px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    background: rgba(224, 168, 104, 0.12);
+    color: var(--crema-bright);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.35rem;
+  }
+  .step {
+    display: block;
+    margin-bottom: 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--crema);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .sym {
+    font-size: 1.3rem;
+    color: var(--crema-bright);
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-soft);
+  }
+
+  /* ── equations and points ── */
+  .big-eq {
+    margin-top: 30px;
+    padding: 22px 28px;
+    border-radius: 14px;
+    background: rgba(20, 17, 26, 0.75);
+    border: 1px solid var(--line);
+    font-size: 1.35rem;
+  }
+  .big-eq :global(.katex-display) {
+    margin: 0;
+  }
+  .points {
+    margin: 30px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 16px;
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+  .points li {
+    padding-left: 18px;
+    border-left: 2px solid var(--roast);
+  }
+
+  /* ── demo slides: fit the page components to the stage ── */
+  .demo-slide :global(.fold),
+  .demo-slide :global(.grf),
+  .demo-slide :global(.gp),
+  .demo-slide :global(.scal) {
+    margin-top: 22px;
+    flex: 1;
+    min-height: 0;
+  }
+  .demo-slide :global(.cup-fig) {
+    width: 400px;
+  }
+  .demo-slide :global(.chart-fig) {
+    max-width: 540px;
+    justify-self: center;
+  }
+  .title-toy :global(.cup) {
+    width: 100%;
+  }
+
+  /* ── try it ── */
+  .try {
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .code :global(pre) {
+    margin: 0;
+    padding: 24px 26px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+  .links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 18px;
+    font-size: 1.15rem;
+  }
+  .links li {
+    display: grid;
+    grid-template-columns: 4.5em 1fr;
+    color: var(--ink-soft);
+  }
+  .links span {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--crema);
+    align-self: center;
+  }
+
+  /* ── progress ── */
+  .hud {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px 8px;
+    pointer-events: none;
+  }
+  .bar {
+    flex: 1;
+    height: 2px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--crema);
+    transition: width 0.25s ease;
+  }
+  .count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+</style>
+
+<script>
+  const deck = document.querySelector<HTMLElement>('[data-deck]')!;
+  const slides = [...deck.querySelectorAll<HTMLElement>('.slide')];
+  const bar = document.querySelector<HTMLElement>('[data-bar]')!;
+  const count = document.querySelector<HTMLElement>('[data-count]')!;
+  let current = 0;
+
+  function fit() {
+    const k = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    for (const s of slides) s.style.zoom = String(k);
+  }
+
+  function show(i: number) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, n) => s.classList.toggle('active', n === current));
+    bar.style.width = `${((current + 1) / slides.length) * 100}%`;
+    count.textContent = `${current + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${current + 1}`);
+  }
+
+  window.addEventListener('keydown', (ev) => {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    // Leave the keys alone while a demo control has focus.
+    const t = ev.target as HTMLElement;
+    if (t.closest('input, button, select, textarea, canvas')) {
+      if (ev.key === 'Escape') t.blur();
+      return;
+    }
+    switch (ev.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case 'PageDown':
+      case ' ':
+        show(current + 1);
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+      case 'PageUp':
+        show(current - 1);
+        break;
+      case 'Home':
+        show(0);
+        break;
+      case 'End':
+        show(slides.length - 1);
+        break;
+      case 'f':
+      case 'F':
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+        break;
+      default:
+        return;
+    }
+    ev.preventDefault();
+  });
+
+  window.addEventListener('resize', fit);
+  window.addEventListener('hashchange', () => show((Number(location.hash.slice(1)) || 1) - 1));
+  fit();
+  show((Number(location.hash.slice(1)) || 1) - 1);
+</script>

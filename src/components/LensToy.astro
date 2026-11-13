@@ -8,6 +8,12 @@
 // cropped square and centred on the brightest cluster galaxy. The lens drawn
 // over it is a hand-placed toy, roughly aligned with the cluster.
 import cupImage from '../assets/abell-s1063-webb.jpg';
+
+// `formal` switches the visible wording to an academic register (used by the slides).
+interface Props {
+  formal?: boolean;
+}
+const { formal = false } = Astro.props;
 ---
 
 <div class="toy" data-lens-toy data-bg={cupImage.src}>
@@ -21,7 +27,13 @@ import cupImage from '../assets/abell-s1063-webb.jpg';
 
   <div class="panel">
     <p class="hint">
-      <span><span class="hint-move">Move your pointer</span> to slide a background galaxy behind the cluster.</span>
+      {
+        formal ? (
+          <span><span class="hint-move">Move the pointer</span> to displace a background source behind the cluster.</span>
+        ) : (
+          <span><span class="hint-move">Move your pointer</span> to slide a background galaxy behind the cluster.</span>
+        )
+      }
       <span class="mu">Total magnification <strong data-mu>–</strong></span>
     </p>
     <div class="controls">
@@ -37,12 +49,12 @@ import cupImage from '../assets/abell-s1063-webb.jpg';
         <span>Unmodeled mass</span>
         <input type="range" min="0" max="0.04" step="0.001" value="0" data-grf aria-label="Amplitude of the unmodeled mass field" />
       </label>
-      <button type="button" data-reroll title="Draw a new random mass field">Re-roll field</button>
+      <button type="button" data-reroll title="Draw a new random mass field">{formal ? 'New realization' : 'Re-roll field'}</button>
     </div>
     <p class="credit">
-      In the cup: galaxy cluster Abell S1063 seen by Webb.{' '}
+      {formal ? 'Background: galaxy cluster Abell S1063 observed with JWST.' : 'In the cup: galaxy cluster Abell S1063 seen by Webb.'}{' '}
       <a href="https://esawebb.org/images/potm2505a/">Image</a>: ESA/Webb, NASA &amp; CSA, H. Atek, M. Zamani (ESA/Webb);
-      acknowledgement R. Endsley. The galaxy under the crosshair, its lensed images and the curves are a toy lens drawn on top, not a kappaccino model.
+      acknowledgement R. Endsley. {formal ? 'The source, its lensed images, and the curves are an illustrative lens model overlaid on the image, not a kappaccino model of this cluster.' : 'The galaxy under the crosshair, its lensed images and the curves are a toy lens drawn on top, not a kappaccino model.'}
     </p>
   </div>
 </div>

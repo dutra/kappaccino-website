@@ -5,9 +5,15 @@
 // population scatter s sweeps, so every dot strays from the line by its own
 // amount but stays tethered to it. The "few set free" mode shows the conventional setup:
 // everyone on the line except a handful fitted on their own.
+
+// `formal` switches the visible wording to an academic register (used by the slides).
+interface Props {
+  formal?: boolean;
+}
+const { formal = false } = Astro.props;
 ---
 
-<div class="scal" data-scaling-demo>
+<div class="scal" data-scaling-demo data-formal={formal ? '' : undefined}>
   <figure class="chart-fig">
     <svg class="chart" viewBox="0 0 460 380" role="img" aria-label="Velocity dispersion against luminosity for made-up member galaxies. A line marks the scaling relation and every galaxy sits a little above or below it, joined to it by a short tether.">
       <defs>
@@ -24,8 +30,8 @@
       <line data-star-y class="guide" x1="46" x2="446"></line>
       <text data-star-x-label y="350" text-anchor="middle" class="num">L★</text>
       <text data-star-y-label x="40" text-anchor="end" class="num">σ★</text>
-      <text x="246" y="370" text-anchor="middle" class="axis">luminosity (faint → bright, log)</text>
-      <text x="16" y="174" text-anchor="middle" transform="rotate(-90 16 174)" class="axis">velocity dispersion (log)</text>
+      <text x="246" y="370" text-anchor="middle" class="axis">{formal ? 'log luminosity' : 'luminosity (faint → bright, log)'}</text>
+      <text x="16" y="174" text-anchor="middle" transform="rotate(-90 16 174)" class="axis">{formal ? 'log velocity dispersion' : 'velocity dispersion (log)'}</text>
     </svg>
     <figcaption data-caption></figcaption>
   </figure>
@@ -45,7 +51,7 @@
       <text x="62" y="124" text-anchor="middle" class="num">× 0.67</text>
       <text x="160" y="124" text-anchor="middle" class="num">× 1</text>
       <text x="258" y="124" text-anchor="middle" class="num">× 1.5</text>
-      <text x="160" y="142" text-anchor="middle" class="axis">each member, relative to the relation</text>
+      <text x="160" y="142" text-anchor="middle" class="axis">{formal ? 'member deviation from the mean relation' : 'each member, relative to the relation'}</text>
     </svg>
 
     <div class="controls">
@@ -57,14 +63,14 @@
         <legend class="sr">Model</legend>
         <label>
           <input type="radio" name="scaling-mode" value="all" checked />
-          <span>All may stray</span>
+          <span>{formal ? 'Hierarchical' : 'All may stray'}</span>
         </label>
         <label>
           <input type="radio" name="scaling-mode" value="few" />
-          <span>A few set free</span>
+          <span>{formal ? 'Conventional' : 'A few set free'}</span>
         </label>
       </fieldset>
-      <button type="button" data-reroll title="Draw new deviations for every member">Re-roll</button>
+      <button type="button" data-reroll title="Draw new deviations for every member">{formal ? 'Resample' : 'Re-roll'}</button>
       <button type="button" data-pause aria-pressed="false">Pause</button>
     </div>
   </div>
@@ -293,6 +299,10 @@
     all: '<strong>Every member strays by its own amount</strong> and stays tethered to the relation. All of them together set its height, its slope and the width of the band.',
     few: '<strong>The conventional setup:</strong> everyone sits exactly on the line, except a few influential members fitted on their own (dashed). Those few no longer tell the relation anything.',
   };
+  const FORMAL_CAPTIONS = {
+    all: '<strong>Hierarchical model:</strong> each member deviates individually from the mean relation, while all members jointly constrain its normalisation, slope, and intrinsic scatter.',
+    few: '<strong>Conventional model:</strong> members are fixed to the relation, except for a few influential galaxies fitted independently (dashed), which then carry no information on the relation.',
+  };
 
   function init(root: HTMLElement) {
     const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
@@ -308,6 +318,7 @@
     const caption = $<HTMLElement>('[data-caption]');
     const pauseBtn = $<HTMLButtonElement>('[data-pause]');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const captions = root.hasAttribute('data-formal') ? FORMAL_CAPTIONS : CAPTIONS;
 
     // Static furniture.
     relation.setAttribute('x1', String(px(LX_MIN)));
@@ -483,7 +494,7 @@
       r.addEventListener('change', () => {
         if (!r.checked) return;
         mode = r.value as 'all' | 'few';
-        caption.innerHTML = CAPTIONS[mode];
+        caption.innerHTML = captions[mode];
         render();
       }),
     );
@@ -501,7 +512,7 @@
     }).observe(root);
 
     roll();
-    caption.innerHTML = CAPTIONS[mode];
+    caption.innerHTML = captions[mode];
     setPaused(paused);
     render();
   }
