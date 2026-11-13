@@ -33,23 +33,33 @@ const contributions = [
   },
 ];
 
+const components = [
+  { sym: '\\psi_h', title: 'Cluster-scale halos', body: 'A small number of dark-matter halos with dPIE or elliptical NFW profiles.' },
+  { sym: '\\psi_s', title: 'Member-galaxy subhalos', body: 'One dPIE subhalo per cluster member, tied to its luminosity through scaling relations.' },
+  { sym: '\\psi_{\\rm ext}', title: 'External shear', body: 'The leading-order tidal contribution of mass outside the modeled region.' },
+  { sym: '\\delta\\psi', title: 'Unmodeled mass', body: 'A non-parametric perturbation for structure the parametric components do not capture.' },
+];
+
 const errors = [
   {
     sym: '\\mathbf C_{\\rm meas}',
+    eq: '\\mathbf C_{ii,\\rm meas}=\\sigma_{{\\rm meas},i}^2\\,\\mathbf A_i\\mathbf A_i^{\\rm T}',
     title: 'Measurement uncertainty',
-    body: 'Uncorrelated scatter in the catalogued positions, propagated through the lensing Jacobian. Its amplitude is inferred.',
+    body: 'Uncorrelated scatter in the catalogued positions, propagated to the source plane through the lensing Jacobian. Its amplitude is inferred rather than fixed in advance.',
     tag: 'uncorrelated',
   },
   {
     sym: '\\mathbf C_{\\rm GRF}',
+    eq: '\\mathbf C_{ij,\\rm GRF}=w_iw_j\\,\\mathbf K_\\alpha(\\boldsymbol\\theta_i-\\boldsymbol\\theta_j)',
     title: 'Unmodeled mass',
-    body: 'Deflection perturbations from a Gaussian random field. They scale with source redshift and remain finite on critical curves.',
+    body: 'Deflection perturbations from a Gaussian random field. They scale with source redshift, enter without a Jacobian factor, and remain finite on critical curves.',
     tag: 'contributes mass',
   },
   {
     sym: '\\mathbf C_{\\rm GP}',
+    eq: '\\mathbf C_{ij,\\rm GP}=\\sigma_{\\rm GP}^2\\,e^{-|\\boldsymbol\\theta_i-\\boldsymbol\\theta_j|^2/2\\ell_{\\rm GP}^2}\\,\\mathbf A_i\\mathbf A_j^{\\rm T}',
     title: 'Image-plane displacements',
-    body: 'Correlated offsets unrelated to the cluster mass: line-of-sight structure, feature matching along arcs, residual astrometry.',
+    body: 'Correlated offsets unrelated to the cluster mass: line-of-sight structure, feature matching along arcs, and residual astrometric distortions.',
     tag: 'no mass',
   },
 ];
@@ -106,7 +116,29 @@ python -m pip install -e .`;
       </ul>
     </div>
 
-    <!-- 3 · likelihood -->
+    <!-- 3 · lens model -->
+    <div class="slide">
+      <p class="eyebrow">Lens model</p>
+      <h2>Parametric mass components with a non-parametric perturbation</h2>
+      <div class="big-eq" set:html={tex('\\psi(\\boldsymbol\\theta)=\\sum_{h}\\psi_h(\\boldsymbol\\theta)+\\sum_{s}\\psi_s(\\boldsymbol\\theta)+\\psi_{\\rm ext}(\\boldsymbol\\theta)+\\delta\\psi(\\boldsymbol\\theta)', true)} />
+      <ul class="cards four">
+        {
+          components.map((c) => (
+            <li>
+              <span class="sym" set:html={tex(c.sym)} />
+              <h3>{c.title}</h3>
+              <p>{c.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="foot">
+        The lensing potential{' '}<span set:html={tex('\\psi')} />{' '}determines the deflection{' '}
+        <span set:html={tex('\\boldsymbol\\alpha=\\nabla\\psi')} />. All components are inferred jointly.
+      </p>
+    </div>
+
+    <!-- 4 · likelihood -->
     <div class="slide">
       <p class="eyebrow">Likelihood</p>
       <h2>A local image-plane likelihood</h2>
@@ -114,22 +146,73 @@ python -m pip install -e .`;
         Predicting image positions requires all roots of the lens equation, which is costly and not differentiable. The
         inverse mapping requires a single deflection evaluation per image.
       </p>
-      <div class="big-eq" set:html={tex('\\boldsymbol\\beta_i=\\boldsymbol\\theta_i-\\boldsymbol\\alpha(\\boldsymbol\\theta_i),\\qquad \\boldsymbol F_i=\\boldsymbol\\beta_i-\\boldsymbol\\beta_k', true)} />
-      <ul class="points">
-        <li>Each observed image is mapped to the source plane and compared with its source position, which is sampled jointly with the lens.</li>
-        <li>Residuals are evaluated in the image plane through a local expansion of the lens mapping.</li>
-        <li>The likelihood is smooth and differentiable with respect to all model parameters.</li>
-      </ul>
+      <div class="explain">
+        <div class="eqs">
+          <div class="big-eq" set:html={tex('\\boldsymbol\\beta_i=\\boldsymbol\\theta_i-\\boldsymbol\\alpha(\\boldsymbol\\theta_i),\\qquad \\boldsymbol F_i=\\boldsymbol\\beta_i-\\boldsymbol\\beta_k', true)} />
+          <div class="big-eq" set:html={tex('\\mathcal L_{\\rm pos}(\\boldsymbol\\Theta)\\simeq\\mathcal N\\!\\big(\\boldsymbol F;\\,\\mathbf C\\big)\\prod_{i}\\big\\langle|\\det\\mathbf A_i|\\big\\rangle', true)} />
+        </div>
+        <ul class="points">
+          <li>
+            <span set:html={tex('\\boldsymbol F_i')} />{' '}is the source-plane residual of image{' '}<span set:html={tex('i')} />{' '}
+            with respect to the source position{' '}<span set:html={tex('\\boldsymbol\\beta_k')} />{' '}of its family, which is
+            sampled jointly with the lens.
+          </li>
+          <li>
+            Marginalising over the true image positions, to first order around the measured ones, yields a single Gaussian in{' '}
+            <span set:html={tex('\\boldsymbol F')} />{' '}with covariance{' '}<span set:html={tex('\\mathbf C')} />.
+          </li>
+          <li>
+            The determinant accounts for the change of area between planes. Without it, a source-plane likelihood favours
+            models that place critical curves near the images.
+          </li>
+          <li>The lens equation is never solved, and the likelihood is differentiable in all parameters.</li>
+        </ul>
+      </div>
     </div>
 
-    <!-- 4 · uncertainty on images and critical curves -->
-    <div class="slide demo-slide">
+    <!-- 5 · critical curves: concept -->
+    <div class="slide">
       <p class="eyebrow">Uncertainty propagation</p>
+      <h2>Positional uncertainty near critical curves</h2>
+      <div class="explain">
+        <div class="eqs">
+          <div class="big-eq" set:html={tex('\\mathbf A_i=\\frac{\\partial\\boldsymbol\\beta}{\\partial\\boldsymbol\\theta}\\bigg|_{\\boldsymbol\\theta_i},\\qquad \\mu_i=\\frac{1}{|\\det\\mathbf A_i|}', true)} />
+          <div class="big-eq" set:html={tex('\\mathbf C_{ii,\\rm meas}=\\sigma_{{\\rm meas},i}^2\\,\\mathbf A_i\\mathbf A_i^{\\rm T}', true)} />
+        </div>
+        <ul class="points">
+          <li>
+            On a critical curve one eigenvalue of the Jacobian{' '}<span set:html={tex('\\mathbf A')} />{' '}vanishes and the
+            magnification{' '}<span set:html={tex('\\mu')} />{' '}diverges.
+          </li>
+          <li>
+            A small perturbation of the deflection field displaces a nearby image by a large amount, mainly along the
+            eigenvector of the smallest eigenvalue. Position uncertainties are therefore strongly anisotropic.
+          </li>
+          <li>
+            Two models can reproduce an image position while placing the critical curve differently. The inferred
+            magnification then differs far more than the position.
+          </li>
+          <li>
+            The total covariance remains invertible where{' '}<span set:html={tex('\\mathbf A')} />{' '}is singular, so the
+            likelihood never requires the inverse Jacobian.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 6 · critical curves: demonstration -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Uncertainty propagation · demonstration</p>
       <h2>Uncertainties on image positions and critical curves</h2>
+      <p class="note">
+        Points show the image positions predicted by an ensemble of model draws, and the band the corresponding critical curves.
+        The uncertainty elongates along the arcs and the magnification interval widens as the source approaches the caustic.
+        Illustrative parameters.
+      </p>
       <FoldDemo formal />
     </div>
 
-    <!-- 5 · covariance -->
+    <!-- 7 · covariance -->
     <div class="slide">
       <p class="eyebrow">Positional covariance</p>
       <h2>Three contributions to the positional covariance</h2>
@@ -139,40 +222,149 @@ python -m pip install -e .`;
           errors.map((e) => (
             <li>
               <div class="card-top">
-                <span class="sym" set:html={tex(e.sym)} />
+                <h3>{e.title}</h3>
                 <span class="tag">{e.tag}</span>
               </div>
-              <h3>{e.title}</h3>
+              <div class="card-eq" set:html={tex(e.eq, true)} />
               <p>{e.body}</p>
             </li>
           ))
         }
       </ul>
-      <p class="foot">The amplitude and correlation scale of each term are inferred jointly with the lens model.</p>
+      <p class="foot">
+        The amplitude and correlation scale of each term are inferred jointly with the lens model. The off-diagonal blocks,
+        which arise only from the last two terms, describe correlations between images.
+      </p>
     </div>
 
-    <!-- 6 · random field -->
-    <div class="slide demo-slide">
+    <!-- 8 · random field: concept -->
+    <div class="slide">
       <p class="eyebrow">Unmodeled mass</p>
       <h2>A Gaussian random field for unmodeled mass</h2>
+      <div class="explain">
+        <div class="eqs">
+          <div class="big-eq" set:html={tex('P_\\kappa(k)=A_\\kappa\\left[1+\\left(\\frac{k}{k_{\\rm b}}\\right)^{\\gamma_\\kappa}\\right]^{-1},\\quad \\lambda_{\\rm b}=\\frac{2\\pi}{k_{\\rm b}}', true)} />
+          <div class="big-eq" set:html={tex('\\sigma_{\\rm GRF}^2=\\frac{1}{\\pi}\\int_{k_{\\min}}^{k_{\\max}}\\frac{dk}{k}\\,P_\\kappa(k)', true)} />
+        </div>
+        <ul class="points">
+          <li>
+            The perturbation{' '}<span set:html={tex('\\delta\\psi')} />{' '}is a homogeneous, isotropic, zero-mean Gaussian
+            random field, specified entirely by the power spectrum of its convergence{' '}<span set:html={tex('\\delta\\kappa')} />.
+          </li>
+          <li>
+            The spectrum is flat on scales larger than{' '}<span set:html={tex('\\lambda_{\\rm b}')} />, as for randomly
+            distributed compact clumps, and declines as{' '}<span set:html={tex('k^{-\\gamma_\\kappa}')} />{' '}on smaller scales.
+          </li>
+          <li>
+            The amplitude is parameterised by the rms deflection per coordinate,{' '}<span set:html={tex('\\sigma_{\\rm GRF}')} />,
+            in arcseconds.
+          </li>
+          <li>
+            Images separated by much less than{' '}<span set:html={tex('\\lambda_{\\rm b}')} />{' '}are deflected almost
+            identically. The field can displace a close pair, such as a fold pair, but cannot change its separation.
+          </li>
+          <li>The field contributes directly to the reconstructed mass and magnification maps.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 9 · random field: demonstration -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Unmodeled mass · demonstration</p>
+      <h2>Realizations of the convergence perturbation</h2>
+      <p class="note">
+        A realization of{' '}<span set:html={tex('\\delta\\kappa')} />{' '}as the break scale{' '}
+        <span set:html={tex('\\lambda_{\\rm b}')} />{' '}varies. Larger{' '}<span set:html={tex('\\lambda_{\\rm b}')} />{' '}
+        produces coherent structure on larger angular scales. Illustrative parameters.
+      </p>
       <GrfDemo formal />
     </div>
 
-    <!-- 7 · image-plane GP -->
-    <div class="slide demo-slide">
+    <!-- 10 · image-plane GP: concept -->
+    <div class="slide">
       <p class="eyebrow">Image-plane systematics</p>
       <h2>A Gaussian process for correlated image-plane displacements</h2>
+      <div class="explain">
+        <div class="eqs">
+          <div class="big-eq" set:html={tex('\\mathbf C_{ij,\\rm GP}=\\sigma_{\\rm GP}^2\\exp\\!\\left(-\\frac{|\\boldsymbol\\theta_i-\\boldsymbol\\theta_j|^2}{2\\ell_{\\rm GP}^2}\\right)\\mathbf A_i\\mathbf A_j^{\\rm T}', true)} />
+        </div>
+        <ul class="points">
+          <li>
+            Some effects displace neighbouring images coherently without involving the cluster mass: line-of-sight structure,
+            systematic offsets in matching features along extended arcs, and residual astrometric distortions.
+          </li>
+          <li>
+            <span set:html={tex('\\sigma_{\\rm GP}')} />{' '}is the typical displacement of one image and{' '}
+            <span set:html={tex('\\ell_{\\rm GP}')} />{' '}the angular scale over which displacements remain correlated. Both are
+            inferred.
+          </li>
+          <li>
+            Unlike the mass field, these displacements do not scale with source redshift, and they are propagated through the
+            Jacobians, so they vanish along the stretched direction near a critical curve.
+          </li>
+          <li>
+            These two differences allow the data to distinguish unmodeled cluster mass from image-plane errors, which add no
+            mass to the reconstruction.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 11 · image-plane GP: demonstration -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Image-plane systematics · demonstration</p>
+      <h2>Realizations of the displacement field</h2>
+      <p class="note">
+        A realization of the displacement field as the correlation length{' '}<span set:html={tex('\\ell_{\\rm GP}')} />{' '}
+        varies. Images separated by less than{' '}<span set:html={tex('\\ell_{\\rm GP}')} />{' '}are displaced coherently; more
+        distant images are displaced independently. Illustrative parameters.
+      </p>
       <GpDemo formal />
     </div>
 
-    <!-- 8 · members -->
-    <div class="slide demo-slide">
+    <!-- 12 · members: concept -->
+    <div class="slide">
       <p class="eyebrow">Member galaxies</p>
       <h2>Hierarchical scaling relations with individual deviations</h2>
+      <div class="explain">
+        <div class="eqs">
+          <div class="big-eq" set:html={tex('\\begin{aligned}\\sigma_{0,g}&=\\sigma_\\star\\left(\\frac{L_g}{L_\\star}\\right)^{\\alpha_\\sigma}\\exp(s_\\sigma z_{\\sigma,g})\\\\[6pt] r_{{\\rm cut},g}&=r_{{\\rm cut},\\star}\\left(\\frac{L_g}{L_\\star}\\right)^{\\beta_r}\\exp(s_r z_{r,g})\\end{aligned}', true)} />
+          <div class="big-eq" set:html={tex('M_g\\propto\\sigma_{0,g}^2\\,r_{{\\rm cut},g}', true)} />
+        </div>
+        <ul class="points">
+          <li>
+            The velocity dispersion and truncation radius of each member follow power laws in luminosity, relative to a
+            reference galaxy{' '}<span set:html={tex('L_\\star')} />.
+          </li>
+          <li>
+            Shared by the population:{' '}<span set:html={tex('\\sigma_\\star,\\ r_{{\\rm cut},\\star},\\ \\alpha_\\sigma,\\ \\beta_r')} />{' '}
+            and the intrinsic scatters{' '}<span set:html={tex('s_\\sigma,\\ s_r')} />. Specific to each member: the deviations{' '}
+            <span set:html={tex('z_{\\sigma,g},\\ z_{r,g}')} />.
+          </li>
+          <li>
+            Conventional models fix members to the relations and fit a few influential galaxies independently. Those galaxies
+            constrain the relations best, so that information is lost.
+          </li>
+          <li>
+            Here every member deviates individually while remaining tied to the population, and all members jointly constrain
+            the normalisation, slope, and intrinsic scatter.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 13 · members: demonstration -->
+    <div class="slide demo-slide">
+      <p class="eyebrow">Member galaxies · demonstration</p>
+      <h2>Individual deviations about the mean relation</h2>
+      <p class="note">
+        Illustrative members scatter about the mean relation as the intrinsic scatter{' '}<span set:html={tex('s_\\sigma')} />{' '}
+        varies, each with its own deviation. Select “Conventional” to compare with members fixed to the relation.
+      </p>
       <ScalingDemo formal />
     </div>
 
-    <!-- 9 · inference -->
+    <!-- 14 · inference -->
     <div class="slide">
       <p class="eyebrow">Inference</p>
       <h2>Two-stage inference: optimisation, then sampling</h2>
@@ -191,9 +383,14 @@ python -m pip install -e .`;
           ))
         }
       </ol>
+      <p class="foot">
+        Far-field members:{' '}<span set:html={tex('\\boldsymbol\\alpha_{\\rm far}\\simeq\\boldsymbol G\\,\\boldsymbol w')} />, where{' '}
+        <span set:html={tex('\\boldsymbol G')} />{' '}holds precomputed geometric factors and{' '}<span set:html={tex('\\boldsymbol w')} />{' '}
+        coefficients that depend on the member parameters. Every member retains its individual deviation.
+      </p>
     </div>
 
-    <!-- 10 · availability -->
+    <!-- 15 · availability -->
     <div class="slide">
       <p class="eyebrow">Availability</p>
       <h2>Code and documentation</h2>
@@ -374,6 +571,7 @@ python -m pip install -e .`;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
     margin-bottom: 14px;
   }
   .sym {
@@ -381,6 +579,8 @@ python -m pip install -e .`;
     color: var(--crema-bright);
   }
   .tag {
+    flex: none;
+    white-space: nowrap;
     font-family: var(--font-mono);
     font-size: 11.5px;
     letter-spacing: 0.08em;
@@ -436,6 +636,71 @@ python -m pip install -e .`;
   }
   .title-toy :global(.cup) {
     width: 100%;
+  }
+
+  /* ── explanatory slides ── */
+  .explain {
+    margin-top: 26px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 40px;
+    align-items: center;
+  }
+  .eqs {
+    display: grid;
+    gap: 16px;
+  }
+  .explain .big-eq {
+    margin-top: 0;
+    font-size: 1.12rem;
+    padding: 20px 18px;
+    overflow: hidden;
+  }
+  .explain .points {
+    margin-top: 0;
+    font-size: 1.02rem;
+    line-height: 1.5;
+    gap: 13px;
+  }
+  .note {
+    margin-top: 12px;
+    max-width: 105ch;
+    color: var(--ink-soft);
+    font-size: 0.98rem;
+    line-height: 1.5;
+  }
+  .demo-slide h2 {
+    font-size: 2rem;
+    max-width: none;
+  }
+  .cards.four {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 28px;
+  }
+  .cards.four li {
+    padding: 22px 20px;
+  }
+  .cards.four h3 {
+    font-size: 1.15rem;
+    margin-top: 12px;
+  }
+  .cards.four p {
+    font-size: 0.98rem;
+  }
+  .card-eq {
+    margin: 4px 0 2px;
+    font-size: 0.92rem;
+    overflow: hidden;
+  }
+  .card-eq :global(.katex-display) {
+    margin: 0.5em 0;
+  }
+  .cards.three .card-top h3 {
+    font-size: 1.15rem;
+  }
+  .foot :global(.katex) {
+    color: var(--ink-soft);
   }
 
   /* ── try it ── */

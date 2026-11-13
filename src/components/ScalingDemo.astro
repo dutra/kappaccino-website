@@ -297,11 +297,11 @@ const { formal = false } = Astro.props;
 
   const CAPTIONS = {
     all: '<strong>Every member strays by its own amount</strong> and stays tethered to the relation. All of them together set its height, its slope and the width of the band.',
-    few: '<strong>The conventional setup:</strong> everyone sits exactly on the line, except a few influential members fitted on their own (dashed). Those few no longer tell the relation anything.',
+    few: '<strong>The conventional setup:</strong> everyone sits exactly on the line, whatever scatter the relation is given (band), except a few influential members fitted on their own (dashed). Those few no longer tell the relation anything.',
   };
   const FORMAL_CAPTIONS = {
     all: '<strong>Hierarchical model:</strong> each member deviates individually from the mean relation, while all members jointly constrain its normalisation, slope, and intrinsic scatter.',
-    few: '<strong>Conventional model:</strong> members are fixed to the relation, except for a few influential galaxies fitted independently (dashed), which then carry no information on the relation.',
+    few: '<strong>Conventional model:</strong> members are fixed to the mean relation, whose scatter (band) is not resolved into individual deviations, except for a few influential galaxies fitted independently (dashed), which then carry no information on the relation.',
   };
 
   function init(root: HTMLElement) {
@@ -406,9 +406,7 @@ const { formal = false } = Astro.props;
 
       band.setAttribute(
         'd',
-        few
-          ? ''
-          : `M${px(LX_MIN)} ${py(mean(LX_MIN) + s)}L${px(LX_MAX)} ${py(mean(LX_MAX) + s)}L${px(LX_MAX)} ${py(mean(LX_MAX) - s)}L${px(LX_MIN)} ${py(mean(LX_MIN) - s)}Z`,
+        `M${px(LX_MIN)} ${py(mean(LX_MIN) + s)}L${px(LX_MAX)} ${py(mean(LX_MAX) + s)}L${px(LX_MAX)} ${py(mean(LX_MAX) - s)}L${px(LX_MIN)} ${py(mean(LX_MIN) - s)}Z`,
       );
 
       for (let i = 0; i < N_MEMBERS; i++) {
@@ -427,7 +425,7 @@ const { formal = false } = Astro.props;
 
       // Bell curve of the deviations, drawn at a fixed peak height.
       let d = '';
-      if (!few) {
+      {
         for (let i = 0; i <= 80; i++) {
           const x = 14 + (292 * i) / 80;
           const dv = (x - 160) / DEV_PX;
@@ -437,9 +435,8 @@ const { formal = false } = Astro.props;
       bell.setAttribute('d', d);
       bellFill.setAttribute('d', d ? `${d}L306 110L14 110Z` : '');
 
-      scatterOut.textContent = few ? 'none' : `${Math.round(s * 100)}%`;
+      scatterOut.textContent = `${Math.round(s * 100)}%`;
       slider.value = u.toFixed(3);
-      slider.disabled = few;
     }
 
     let paused = reduceMotion;
@@ -453,8 +450,9 @@ const { formal = false } = Astro.props;
       raf = 0;
       const dt = Math.min(now - last, 100);
       last = now;
-      if (!paused && mode === 'all') {
-        clock += dt / 1000;
+      if (!paused) {
+        // The scatter sweeps in both modes; the deviations only wander when every member has one.
+        if (mode === 'all') clock += dt / 1000;
         if (now - lastInput > IDLE_AFTER) {
           phase += (2 * Math.PI * dt) / SWEEP_PERIOD;
           u = 0.5 - 0.5 * Math.cos(phase);
